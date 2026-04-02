@@ -1,0 +1,86 @@
+import 'package:flutter/material.dart';
+import '../services/database_service.dart';
+
+class CommunicationScreen extends StatefulWidget {
+  final int patientId;
+  CommunicationScreen({required this.patientId});
+
+  @override
+  _CommunicationScreenState createState() => _CommunicationScreenState();
+}
+
+class _CommunicationScreenState extends State<CommunicationScreen> {
+  final DatabaseService _dbService = DatabaseService();
+  final TextEditingController _noteController = TextEditingController();
+  String _selectedAuthor = 'Врач';
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Консилиум и Заметки')),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                DropdownButton<String>(
+                  value: _selectedAuthor,
+                  items: ['Врач', 'Психолог', 'Инструктор ЛФК'].map((String value) {
+                    return DropdownMenuItem<String>(value: value, child: Text(value));
+                  }).toList(),
+                  onChanged: (val) => setState(() => _selectedAuthor = val!),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: _noteController,
+                    decoration: InputDecoration(hintText: 'Введите заметку...'),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.send),
+                  onPressed: () async {
+                    if (_noteController.text.isNotEmpty) {
+                      await _dbService.insertNote(widget.patientId, _selectedAuthor, _noteController.text);
+                      _noteController.clear();
+                      setState(() {});
+                    }
+                  },
+                )
+              ],
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _dbService.getNotes(widget.patientId),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+                return ListView.builder(
+                  itemCount: snapshot.data!.length,
+                  itemBuilder: (context, index) {
+                    final note = snapshot.data![index];
+                    return ListTile(
+                      title: Text(note['author'], style: TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text(note['content']),
+                      trailing: Text(note['timestamp'].toString().substring(11, 16)),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          Divider(),
+          ListTile(
+            leading: Icon(Icons.calendar_month),
+            title: Text('Общий календарь мероприятий'),
+            subtitle: Text('Групповая терапия: Завтра в 10:00'),
+            onTap: () {
+              // В прототипе просто показываем заглушку
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Переход к календарю...')));
+            },
+          )
+        ],
+      ),
+    );
+  }
+}
