@@ -142,6 +142,14 @@ class DatabaseService {
     )).toList();
   }
 
+  Future<void> deletePatient(int id) async {
+    final conn = await connection;
+    await conn.execute(
+      Sql.named('DELETE FROM patients WHERE id = @id'),
+      parameters: {'id': id},
+    );
+  }
+
   // Measurements
   Future<void> insertMeasurement(Measurement m) async {
     final conn = await connection;

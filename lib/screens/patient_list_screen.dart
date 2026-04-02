@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/patient.dart';
 import '../services/database_service.dart';
 import 'patient_details_screen.dart';
@@ -25,9 +26,20 @@ class _PatientListScreenState extends State<PatientListScreen> {
         _patients = patients;
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка загрузки данных: \$e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка загрузки данных: \$e')),
+        );
+      }
+    }
+  }
+
+  String _formatDate(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr);
+      return DateFormat('dd.MM.yyyy').format(date);
+    } catch (e) {
+      return dateStr;
     }
   }
 
@@ -45,7 +57,26 @@ class _PatientListScreenState extends State<PatientListScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(controller: nameController, decoration: InputDecoration(labelText: 'ФИО')),
-              TextField(controller: dateController, decoration: InputDecoration(labelText: 'Дата рождения (ГГГГ-ММ-ДД)')),
+              TextField(
+                controller: dateController, 
+                readOnly: true,
+                decoration: InputDecoration(
+                  labelText: 'Дата рождения',
+                  hintText: 'Выберите дату',
+                  suffixIcon: Icon(Icons.calendar_today),
+                ),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime(1990),
+                    firstDate: DateTime(1900),
+                    lastDate: DateTime.now(),
+                  );
+                  if (picked != null) {
+                    dateController.text = DateFormat('yyyy-MM-dd').format(picked);
+                  }
+                },
+              ),
               TextField(controller: contactController, decoration: InputDecoration(labelText: 'Контакты родственников')),
             ],
           ),
@@ -54,13 +85,13 @@ class _PatientListScreenState extends State<PatientListScreen> {
           TextButton(onPressed: () => Navigator.pop(context), child: Text('Отмена')),
           ElevatedButton(
             onPressed: () async {
-              if (nameController.text.isNotEmpty) {
+              if (nameController.text.isNotEmpty && dateController.text.isNotEmpty) {
                 await _dbService.insertPatient(Patient(
                   name: nameController.text,
                   birthDate: dateController.text,
                   relativeContact: contactController.text,
                 ));
-                Navigator.pop(context);
+                if (mounted) Navigator.pop(context);
                 _loadPatients();
               }
             },
@@ -69,6 +100,28 @@ class _PatientListScreenState extends State<PatientListScreen> {
         ],
       ),
     );
+  }
+
+  void _deletePatient(int id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Удаление'),
+        content: Text('Вы уверены, что хотите удалить профиль пациента? Все связанные данные (анализы, дневник) будут удалены.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true), 
+            child: Text('Удалить', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _dbService.deletePatient(id);
+      _loadPatients();
+    }
   }
 
   @override
@@ -81,14 +134,28 @@ class _PatientListScreenState extends State<PatientListScreen> {
             itemCount: _patients.length,
             itemBuilder: (context, index) {
               final p = _patients[index];
-              return ListTile(
-                leading: CircleAvatar(child: Icon(Icons.person)),
-                title: Text(p.name),
-                subtitle: Text('ДР: \${p.birthDate}'),
-                trailing: Icon(Icons.chevron_right),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => PatientDetailsScreen(patient: p)),
+              return Dismissible(
+                key: Key(p.id.toString()),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  color: Colors.red,
+                  alignment: Alignment.centerRight,
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  child: Icon(Icons.delete, color: Colors.white),
+                ),
+                confirmDismiss: (direction) async {
+                  _deletePatient(p.id!);
+                  return false;
+                },
+                child: ListTile(
+                  leading: CircleAvatar(child: Icon(Icons.person)),
+                  title: Text(p.name),
+                  subtitle: Text('Дата Рождения: ' + _formatDate(p.birthDate)),
+                  trailing: Icon(Icons.chevron_right),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => PatientDetailsScreen(patient: p)),
+                  ),
                 ),
               );
             },
