@@ -50,15 +50,59 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   }
 
   _addMood() async {
-    String comment = "Чувствую прогресс в упражнениях, но спина еще болит.";
-    await _dbService.insertMoodEntry(MoodEntry(
-      patientId: widget.patient.id!,
-      score: 4,
-      comment: comment,
-      timestamp: DateTime.now().toString(),
-      sentiment: AIService.analyzeSentiment(comment),
-    ));
-    _loadData();
+    final commentController = TextEditingController();
+    double currentScore = 3;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Дневник настроения'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Как вы себя чувствуете? (1-5)'),
+              Slider(
+                value: currentScore,
+                min: 1,
+                max: 5,
+                divisions: 4,
+                label: currentScore.toInt().toString(),
+                onChanged: (val) => setDialogState(() => currentScore = val),
+              ),
+              TextField(
+                controller: commentController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Опишите ваши мысли и состояние...',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: Text('Отмена')),
+            ElevatedButton(
+              onPressed: () async {
+                String comment = commentController.text;
+                if (comment.isEmpty) comment = "Без комментария";
+                
+                await _dbService.insertMoodEntry(MoodEntry(
+                  patientId: widget.patient.id!,
+                  score: currentScore.toInt(),
+                  comment: comment,
+                  timestamp: DateTime.now().toString(),
+                  sentiment: AIService.analyzeSentiment(comment),
+                ));
+                Navigator.pop(context);
+                _loadData();
+              },
+              child: Text('Сохранить'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -181,7 +225,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     return ListView.builder(
       shrinkWrap: true,
       physics: NeverScrollableScrollPhysics(),
-      itemCount: _moods.length > 3 ? 3 : _moods.length,
+      itemCount: _moods.length > 5 ? 5 : _moods.length,
       itemBuilder: (context, index) {
         final m = _moods[index];
         return Card(
@@ -190,8 +234,8 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               m.sentiment == 'Negative' ? Icons.warning_amber_rounded : Icons.check_circle_outline,
               color: m.sentiment == 'Negative' ? Colors.orange : Colors.green,
             ),
-            title: Text(m.comment, maxLines: 1, overflow: TextOverflow.ellipsis),
-            subtitle: Text('Анализ ИИ: ${m.sentiment} | ${m.timestamp.substring(11, 16)}'),
+            title: Text(m.comment, maxLines: 2, overflow: TextOverflow.ellipsis),
+            subtitle: Text('Оценка: ' + m.score.toString() + ' | Анализ: ' + (m.sentiment ?? '...') + ' | ' + m.timestamp.substring(11, 16)),
           ),
         );
       },
