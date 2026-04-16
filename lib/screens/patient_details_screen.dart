@@ -21,6 +21,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   final DatabaseService _dbService = DatabaseService();
   List<Measurement> _measurements = [];
   List<MoodEntry> _moods = [];
+  List<Appointment> _appointments = [];
   String _trend = 'Загрузка...';
 
   @override
@@ -33,16 +34,92 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     try {
       final m = await _dbService.getMeasurements(widget.patient.id!);
       final mood = await _dbService.getMoodEntries(widget.patient.id!);
+      final appts = await _dbService.getAppointments(widget.patient.id!);
       if (mounted) {
         setState(() {
           _measurements = m;
           _moods = mood;
+          _appointments = appts;
           _trend = AIService.analyzeTrend(m);
         });
       }
     } catch (e) {
       debugPrint("Error loading data: $e");
     }
+  }
+
+  _addAppointment() async {
+    final titleController = TextEditingController();
+    final typeController = TextEditingController(text: 'Процедура');
+    final roomController = TextEditingController();
+    final doctorController = TextEditingController();
+    DateTime selectedDate = DateTime.now();
+    TimeOfDay selectedTime = TimeOfDay.now();
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Новое мероприятие'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Название')),
+                TextField(controller: typeController, decoration: const InputDecoration(labelText: 'Тип (ЛФК, Прием и т.д.)')),
+                TextField(controller: roomController, decoration: const InputDecoration(labelText: 'Кабинет')),
+                TextField(controller: doctorController, decoration: const InputDecoration(labelText: 'Врач')),
+                const SizedBox(height: 10),
+                ListTile(
+                  title: Text("Дата: ${selectedDate.toString().split(' ')[0]}"),
+                  trailing: const Icon(Icons.calendar_today),
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (date != null) setDialogState(() => selectedDate = date);
+                  },
+                ),
+                ListTile(
+                  title: Text("Время: ${selectedTime.format(context)}"),
+                  trailing: const Icon(Icons.access_time),
+                  onTap: () async {
+                    final time = await showTimePicker(context: context, initialTime: selectedTime);
+                    if (time != null) setDialogState(() => selectedTime = time);
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
+            ElevatedButton(
+              onPressed: () async {
+                final fullDateTime = DateTime(
+                  selectedDate.year, selectedDate.month, selectedDate.day,
+                  selectedTime.hour, selectedTime.minute,
+                );
+                await _dbService.insertAppointment(Appointment(
+                  patientId: widget.patient.id!,
+                  type: typeController.text,
+                  title: titleController.text,
+                  time: fullDateTime.toString(),
+                  room: roomController.text,
+                  doctor: doctorController.text,
+                ));
+                if (!context.mounted) return;
+                Navigator.pop(context);
+                _loadData();
+              },
+              child: const Text('Создать'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   _addMeasurement() async {
@@ -191,6 +268,9 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               const SizedBox(height: 10),
               _buildMeasurementsDetails(),
               const SizedBox(height: 24),
+              Text('Мой календарь мероприятий', style: Theme.of(context).textTheme.titleLarge),
+              _buildAppointmentsList(),
+              const SizedBox(height: 24),
               Text('Рекомендации врача', style: Theme.of(context).textTheme.titleLarge),
               _buildAICard(),
               const SizedBox(height: 24),
@@ -256,6 +336,9 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               const SizedBox(height: 10),
               _buildMeasurementsDetails(),
               const SizedBox(height: 20),
+              Text('План мероприятий', style: Theme.of(context).textTheme.titleLarge),
+              _buildAppointmentsList(),
+              const SizedBox(height: 20),
               Text('Психологический профиль', style: Theme.of(context).textTheme.titleLarge),
               _buildMoodList(),
             ],
@@ -285,6 +368,12 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       spacing: 10,
       runSpacing: 10,
       children: [
+        ElevatedButton.icon(
+          onPressed: _addAppointment,
+          icon: const Icon(Icons.event),
+          label: const Text('Назначить мероприятие'),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade50),
+        ),
         ElevatedButton.icon(
           onPressed: () => Navigator.push(
             context, 
@@ -424,6 +513,48 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildAppointmentsList() {
+    if (_appointments.isEmpty) return const Card(child: ListTile(title: Text('Мероприятий не запланировано')));
+    
+    return Column(
+      children: _appointments.map((app) {
+        final date = DateTime.parse(app.time);
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: _getAppTypeColor(app.type),
+              child: Icon(_getAppTypeIcon(app.type), color: Colors.white, size: 20),
+            ),
+            title: Text(app.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text('${app.type} • Каб. ${app.room} • ${app.doctor}'),
+            trailing: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('${date.day}.${date.month}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text('${date.hour}:${date.minute.toString().padLeft(2, '0')}'),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Color _getAppTypeColor(String type) {
+    if (type.contains('ЛФК')) return Colors.green;
+    if (type.contains('Прием')) return Colors.blue;
+    if (type.contains('Процедура')) return Colors.orange;
+    return Colors.purple;
+  }
+
+  IconData _getAppTypeIcon(String type) {
+    if (type.contains('ЛФК')) return Icons.directions_run;
+    if (type.contains('Прием')) return Icons.medical_services;
+    if (type.contains('Процедура')) return Icons.vaccines;
+    return Icons.event;
   }
 
   Widget _buildMoodList() {

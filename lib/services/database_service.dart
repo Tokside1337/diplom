@@ -253,6 +253,39 @@ class DatabaseService {
     }).toList();
   }
 
+  // Appointments
+  Future<void> insertAppointment(Appointment app) async {
+    final conn = await connection;
+    await conn.execute(
+      Sql.named('INSERT INTO appointments (patient_id, type, title, time, room, doctor) VALUES (@pId, @type, @title, @time, @room, @doctor)'),
+      parameters: {
+        'pId': app.patientId,
+        'type': app.type,
+        'title': app.title,
+        'time': app.time,
+        'room': app.room,
+        'doctor': app.doctor,
+      },
+    );
+  }
+
+  Future<List<Appointment>> getAppointments(int patientId) async {
+    final conn = await connection;
+    final result = await conn.execute(
+      Sql.named('SELECT id, patient_id, type, title, time, room, doctor FROM appointments WHERE patient_id = @pId ORDER BY time ASC'),
+      parameters: {'pId': patientId},
+    );
+    return result.map((row) => Appointment(
+      id: row[0] as int,
+      patientId: row[1] as int,
+      type: row[2] as String,
+      title: row[3] as String,
+      time: row[4] as String,
+      room: row[5] as String,
+      doctor: row[6] as String,
+    )).toList();
+  }
+
   // Users
   Future<void> registerUser(User user) async {
     final conn = await connection;
