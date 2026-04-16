@@ -181,7 +181,7 @@ class DatabaseService {
   Future<List<Measurement>> getMeasurements(int patientId) async {
     final conn = await connection;
     final result = await conn.execute(
-      Sql.named('SELECT id, patient_id, pressure_systolic, pressure_diastolic, pulse, pain_level, timestamp FROM measurements WHERE patient_id = @pId ORDER BY timestamp DESC'),
+      Sql.named('SELECT id, patient_id, pressure_systolic, pressure_diastolic, pulse, pain_level, timestamp FROM measurements WHERE patient_id = @pId ORDER BY timestamp ASC'),
       parameters: {'pId': patientId},
     );
     return result.map((row) => Measurement(
@@ -213,7 +213,7 @@ class DatabaseService {
   Future<List<MoodEntry>> getMoodEntries(int patientId) async {
     final conn = await connection;
     final result = await conn.execute(
-      Sql.named('SELECT id, patient_id, score, comment, timestamp, sentiment FROM mood_entries WHERE patient_id = @pId ORDER BY timestamp DESC'),
+      Sql.named('SELECT id, patient_id, score, comment, timestamp, sentiment FROM mood_entries WHERE patient_id = @pId ORDER BY timestamp ASC'),
       parameters: {'pId': patientId},
     );
     return result.map((row) => MoodEntry(
@@ -235,7 +235,7 @@ class DatabaseService {
         'pId': patientId,
         'author': author,
         'content': content,
-        'ts': DateTime.now().toString(),
+        'ts': DateTime.now().toUtc().add(const Duration(hours: 3)).toString(),
       },
     );
   }

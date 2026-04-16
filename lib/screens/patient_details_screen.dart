@@ -29,14 +29,20 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     _loadData();
   }
 
-  _loadData() async {
-    final m = await _dbService.getMeasurements(widget.patient.id!);
-    final mood = await _dbService.getMoodEntries(widget.patient.id!);
-    setState(() {
-      _measurements = m;
-      _moods = mood;
-      _trend = AIService.analyzeTrend(m);
-    });
+  Future<void> _loadData() async {
+    try {
+      final m = await _dbService.getMeasurements(widget.patient.id!);
+      final mood = await _dbService.getMoodEntries(widget.patient.id!);
+      if (mounted) {
+        setState(() {
+          _measurements = m;
+          _moods = mood;
+          _trend = AIService.analyzeTrend(m);
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading data: $e");
+    }
   }
 
   _addMeasurement() async {
@@ -78,7 +84,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                 pressureDiastolic: double.tryParse(diastolicController.text) ?? 80.0,
                 pulse: int.tryParse(pulseController.text) ?? 70,
                 painLevel: 0,
-                timestamp: DateTime.now().toString(),
+                timestamp: DateTime.now().toUtc().add(const Duration(hours: 3)).toString(),
               ));
               if (!context.mounted) return;
               Navigator.pop(context);
@@ -133,7 +139,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                   patientId: widget.patient.id!,
                   score: currentScore.toInt(),
                   comment: comment,
-                  timestamp: DateTime.now().toString(),
+                  timestamp: DateTime.now().toUtc().add(const Duration(hours: 3)).toString(),
                   sentiment: AIService.analyzeSentiment(comment),
                 ));
                 if (!context.mounted) return;
@@ -170,22 +176,28 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildPatientHeader(),
-            const SizedBox(height: 24),
-            Text('Мои показатели (Давление)', style: Theme.of(context).textTheme.titleLarge),
-            _buildChart(),
-            const SizedBox(height: 24),
-            Text('Рекомендации врача', style: Theme.of(context).textTheme.titleLarge),
-            _buildAICard(),
-            const SizedBox(height: 24),
-            Text('История настроения', style: Theme.of(context).textTheme.titleLarge),
-            _buildMoodList(),
-          ],
+      body: RefreshIndicator(
+        onRefresh: _loadData,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildPatientHeader(),
+              const SizedBox(height: 24),
+              Text('Мои показатели давления (Верхнее и нижнее)', style: Theme.of(context).textTheme.titleLarge),
+              _buildChart(),
+              const SizedBox(height: 10),
+              _buildMeasurementsDetails(),
+              const SizedBox(height: 24),
+              Text('Рекомендации врача', style: Theme.of(context).textTheme.titleLarge),
+              _buildAICard(),
+              const SizedBox(height: 24),
+              Text('История настроения', style: Theme.of(context).textTheme.titleLarge),
+              _buildMoodList(),
+            ],
+          ),
         ),
       ),
       floatingActionButton: Column(
@@ -222,26 +234,32 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                 patientId: widget.patient.id!,
                 isPatientView: false,
               )),
-            ),
+            ).then((_) => _loadData()),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildDoctorControls(),
-            const SizedBox(height: 20),
-            Text('Аналитика ИИ и Прогноз', style: Theme.of(context).textTheme.titleLarge),
-            _buildAICard(),
-            const SizedBox(height: 20),
-            Text('График состояния', style: Theme.of(context).textTheme.titleLarge),
-            _buildChart(),
-            const SizedBox(height: 20),
-            Text('Психологический профиль', style: Theme.of(context).textTheme.titleLarge),
-            _buildMoodList(),
-          ],
+      body: RefreshIndicator(
+        onRefresh: _loadData,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDoctorControls(),
+              const SizedBox(height: 20),
+              Text('Аналитика ИИ и Прогноз', style: Theme.of(context).textTheme.titleLarge),
+              _buildAICard(),
+              const SizedBox(height: 20),
+              Text('График давления', style: Theme.of(context).textTheme.titleLarge),
+              _buildChart(),
+              const SizedBox(height: 10),
+              _buildMeasurementsDetails(),
+              const SizedBox(height: 20),
+              Text('Психологический профиль', style: Theme.of(context).textTheme.titleLarge),
+              _buildMoodList(),
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -268,7 +286,10 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       runSpacing: 10,
       children: [
         ElevatedButton.icon(
-          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => QuestionnaireScreen())),
+          onPressed: () => Navigator.push(
+            context, 
+            MaterialPageRoute(builder: (context) => QuestionnaireScreen())
+          ).then((_) => _loadData()),
           icon: const Icon(Icons.assignment),
           label: const Text('Назначить опросник'),
           style: ElevatedButton.styleFrom(backgroundColor: Colors.blue.shade50),
@@ -318,22 +339,88 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     if (_measurements.isEmpty) return const SizedBox(height: 100, child: Center(child: Text('Нет данных для визуализации')));
     
     return Container(
-      height: 200,
-      padding: const EdgeInsets.only(top: 20, right: 20),
-      child: LineChart(
-        LineChartData(
-          gridData: const FlGridData(show: false),
-          titlesData: const FlTitlesData(show: false),
-          borderData: FlBorderData(show: true),
-          lineBarsData: [
-            LineChartBarData(
-              spots: _measurements.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.pressureSystolic)).toList(),
-              isCurved: true,
-              color: Colors.blue,
-              barWidth: 3,
-              dotData: const FlDotData(show: true),
+      height: 220,
+      padding: const EdgeInsets.only(top: 20, right: 20, bottom: 10),
+      child: Column(
+        children: [
+          Expanded(
+            child: LineChart(
+              LineChartData(
+                gridData: const FlGridData(show: true, drawVerticalLine: false),
+                titlesData: const FlTitlesData(
+                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                ),
+                borderData: FlBorderData(show: true),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: _measurements.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.pressureSystolic)).toList(),
+                    isCurved: true,
+                    color: Colors.red,
+                    barWidth: 3,
+                    dotData: const FlDotData(show: true),
+                  ),
+                  LineChartBarData(
+                    spots: _measurements.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.pressureDiastolic)).toList(),
+                    isCurved: true,
+                    color: Colors.blue,
+                    barWidth: 3,
+                    dotData: const FlDotData(show: true),
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildLegendItem('Сист.', Colors.red),
+              const SizedBox(width: 20),
+              _buildLegendItem('Диаст.', Colors.blue),
+            ],
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(String label, Color color) {
+    return Row(
+      children: [
+        Container(width: 12, height: 12, color: color),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 12)),
+      ],
+    );
+  }
+
+  Widget _buildMeasurementsDetails() {
+    if (_measurements.isEmpty) return const SizedBox();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          children: _measurements.reversed.take(3).map((m) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(m.timestamp.substring(11, 16), style: const TextStyle(color: Colors.grey)),
+                  Text('${m.pressureSystolic.toInt()}/${m.pressureDiastolic.toInt()}', 
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Row(
+                    children: [
+                      const Icon(Icons.favorite, color: Colors.red, size: 16),
+                      const SizedBox(width: 4),
+                      Text('${m.pulse}'),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
         ),
       ),
     );
@@ -341,12 +428,13 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
 
   Widget _buildMoodList() {
     if (_moods.isEmpty) return const Center(child: Text('Дневник настроения пуст'));
+    final displayMoods = _moods.reversed.toList();
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: _moods.length > 5 ? 5 : _moods.length,
+      itemCount: displayMoods.length > 5 ? 5 : displayMoods.length,
       itemBuilder: (context, index) {
-        final m = _moods[index];
+        final m = displayMoods[index];
         return Card(
           child: ListTile(
             leading: Icon(
