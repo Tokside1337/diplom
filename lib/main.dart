@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'screens/patient_list_screen.dart';
+import 'screens/login_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,7 +22,6 @@ class RehabApp extends StatelessWidget {
           elevation: 2,
         ),
       ),
-      // Добавляем поддержку русского языка для стандартных виджетов (календарь и т.д.)
       localizationsDelegates: [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -32,7 +31,7 @@ class RehabApp extends StatelessWidget {
         Locale('ru', 'RU'),
       ],
       locale: Locale('ru', 'RU'),
-      home: PatientListScreen(),
+      home: LoginScreen(),
       debugShowCheckedModeBanner: false,
     );
   }

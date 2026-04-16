@@ -1,6 +1,7 @@
 import 'package:postgres/postgres.dart';
 import '../models/patient.dart';
 import '../models/medical_models.dart';
+import '../models/user.dart';
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
@@ -110,6 +111,17 @@ class DatabaseService {
         author TEXT,
         content TEXT,
         timestamp TEXT
+      )
+    ''');
+
+    // 6. Пользователи
+    await conn.execute('''
+      CREATE TABLE IF NOT EXISTS users(
+        id SERIAL PRIMARY KEY,
+        login TEXT UNIQUE,
+        password TEXT,
+        role TEXT,
+        patient_id INTEGER REFERENCES patients(id) ON DELETE SET NULL
       )
     ''');
   }
@@ -239,5 +251,40 @@ class DatabaseService {
       'content': row[1],
       'timestamp': row[2],
     }).toList();
+  }
+
+  // Users
+  Future<void> registerUser(User user) async {
+    final conn = await connection;
+    await conn.execute(
+      Sql.named('INSERT INTO users (login, password, role, patient_id) VALUES (@login, @password, @role, @patientId)'),
+      parameters: {
+        'login': user.login,
+        'password': user.password,
+        'role': user.role.name,
+        'patientId': user.patientId,
+      },
+    );
+  }
+
+  Future<User?> loginUser(String login, String password) async {
+    final conn = await connection;
+    final result = await conn.execute(
+      Sql.named('SELECT id, login, password, role, patient_id FROM users WHERE login = @login AND password = @password'),
+      parameters: {
+        'login': login,
+        'password': password,
+      },
+    );
+
+    if (result.isEmpty) return null;
+    final row = result.first;
+    return User(
+      id: row[0] as int,
+      login: row[1] as String,
+      password: row[2] as String,
+      role: UserRole.values.firstWhere((e) => e.name == row[3]),
+      patientId: row[4] as int?,
+    );
   }
 }

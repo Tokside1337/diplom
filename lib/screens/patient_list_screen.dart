@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../models/patient.dart';
 import '../services/database_service.dart';
 import 'patient_details_screen.dart';
+import 'login_screen.dart';
 
 class PatientListScreen extends StatefulWidget {
   @override
@@ -17,6 +18,13 @@ class _PatientListScreenState extends State<PatientListScreen> {
   void initState() {
     super.initState();
     _loadPatients();
+  }
+
+  void _logout() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => LoginScreen()),
+    );
   }
 
   _loadPatients() async {
@@ -127,9 +135,18 @@ class _PatientListScreenState extends State<PatientListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Цифровые профили пациентов')),
+      appBar: AppBar(
+        title: Text('Цифровые профили пациентов'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.logout),
+            onPressed: _logout,
+            tooltip: 'Выйти',
+          ),
+        ],
+      ),
       body: _patients.isEmpty 
-        ? Center(child: Text('Список пуст. Добавьте первого пациента.'))
+        ? Center(child: Text('Список пациентов пуст.'))
         : ListView.builder(
             itemCount: _patients.length,
             itemBuilder: (context, index) {
@@ -154,17 +171,12 @@ class _PatientListScreenState extends State<PatientListScreen> {
                   trailing: Icon(Icons.chevron_right),
                   onTap: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => PatientDetailsScreen(patient: p)),
+                    MaterialPageRoute(builder: (context) => PatientDetailsScreen(patient: p, isPatientView: false)),
                   ),
                 ),
               );
             },
           ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddPatientDialog,
-        child: Icon(Icons.add),
-        tooltip: 'Добавить пациента',
-      ),
     );
   }
 }
