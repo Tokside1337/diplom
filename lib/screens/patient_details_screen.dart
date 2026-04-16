@@ -383,12 +383,6 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
           label: const Text('Назначить опросник'),
           style: ElevatedButton.styleFrom(backgroundColor: Colors.blue.shade50),
         ),
-        ElevatedButton.icon(
-          onPressed: _addMood,
-          icon: const Icon(Icons.edit_note),
-          label: const Text('Сделать пометку'),
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade50),
-        ),
       ],
     );
   }
@@ -530,17 +524,50 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
             ),
             title: Text(app.title, style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Text('${app.type} • Каб. ${app.room} • ${app.doctor}'),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text('${date.day}.${date.month}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text('${date.hour}:${date.minute.toString().padLeft(2, '0')}'),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text('${date.day}.${date.month}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text('${date.hour}:${date.minute.toString().padLeft(2, '0')}'),
+                  ],
+                ),
+                if (!widget.isPatientView)
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                    onPressed: () => _confirmDeleteAppointment(app.id!),
+                  ),
               ],
             ),
           ),
         );
       }).toList(),
     );
+  }
+
+  _confirmDeleteAppointment(int id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Удаление мероприятия'),
+        content: const Text('Вы уверены, что хотите удалить это мероприятие?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true), 
+            child: const Text('Удалить', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _dbService.deleteAppointment(id);
+      _loadData();
+    }
   }
 
   Color _getAppTypeColor(String type) {

@@ -271,6 +271,13 @@ class DatabaseService {
 
   Future<List<Appointment>> getAppointments(int patientId) async {
     final conn = await connection;
+    // Удаляем прошедшие мероприятия перед получением списка
+    final now = DateTime.now().toUtc().add(const Duration(hours: 3)).toString();
+    await conn.execute(
+      Sql.named('DELETE FROM appointments WHERE patient_id = @pId AND time < @now'),
+      parameters: {'pId': patientId, 'now': now},
+    );
+
     final result = await conn.execute(
       Sql.named('SELECT id, patient_id, type, title, time, room, doctor FROM appointments WHERE patient_id = @pId ORDER BY time ASC'),
       parameters: {'pId': patientId},
@@ -284,6 +291,14 @@ class DatabaseService {
       room: row[5] as String,
       doctor: row[6] as String,
     )).toList();
+  }
+
+  Future<void> deleteAppointment(int id) async {
+    final conn = await connection;
+    await conn.execute(
+      Sql.named('DELETE FROM appointments WHERE id = @id'),
+      parameters: {'id': id},
+    );
   }
 
   // Users
