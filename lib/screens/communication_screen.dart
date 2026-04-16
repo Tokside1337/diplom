@@ -90,16 +90,6 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
                 ),
               ),
             ),
-          Divider(),
-          ListTile(
-            leading: Icon(Icons.calendar_month),
-            title: Text('Общий календарь мероприятий'),
-            subtitle: Text('Групповая терапия: Завтра в 10:00'),
-            onTap: () {
-              // В прототипе просто показываем заглушку
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Переход к календарю...')));
-            },
-          )
         ],
       ),
     );
