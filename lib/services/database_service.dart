@@ -1,7 +1,8 @@
 import 'package:postgres/postgres.dart';
-import '../models/patient.dart';
-import '../models/medical_models.dart';
-import '../models/user.dart';
+import 'package:diplom/models/patient.dart';
+import 'package:diplom/models/doctor.dart';
+import 'package:diplom/models/medical_models.dart';
+import 'package:diplom/models/user.dart';
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
@@ -34,12 +35,13 @@ class DatabaseService {
           username: _username,
           password: _password,
         ),
-        settings: ConnectionSettings(sslMode: SslMode.disable),
+        settings: const ConnectionSettings(sslMode: SslMode.disable),
       );
 
       await _ensureTablesExist(conn);
       return conn;
     } catch (e) {
+      // ignore: avoid_print
       print('Ошибка подключения к PostgreSQL: \$e');
       rethrow;
     }
@@ -54,6 +56,16 @@ class DatabaseService {
         birth_date TEXT,
         photo_path TEXT,
         relative_contact TEXT
+      )
+    ''');
+
+    await conn.execute('''
+      CREATE TABLE IF NOT EXISTS doctors(
+        id SERIAL PRIMARY KEY,
+        name TEXT,
+        specialization TEXT,
+        phone TEXT,
+        cabinet TEXT
       )
     ''');
     
@@ -142,9 +154,55 @@ class DatabaseService {
         login TEXT UNIQUE,
         password TEXT,
         role TEXT,
-        patient_id INTEGER REFERENCES patients(id) ON DELETE SET NULL
+        patient_id INTEGER REFERENCES patients(id) ON DELETE SET NULL,
+        doctor_id INTEGER REFERENCES doctors(id) ON DELETE SET NULL
       )
     ''');
+
+    // Проверка наличия администратора по умолчанию
+    final adminCheck = await conn.execute(
+      Sql.named('SELECT id FROM users WHERE login = @login'),
+      parameters: {'login': 'admin'},
+    );
+
+    if (adminCheck.isEmpty) {
+      await conn.execute(
+        Sql.named('INSERT INTO users (login, password, role) VALUES (@login, @password, @role)'),
+        parameters: {
+          'login': 'admin',
+          'password': '1234', // В реальном приложении пароль должен быть захеширован
+          'role': 'admin',
+        },
+      );
+    }
+  }
+
+  // Doctor CRUD
+  Future<int> insertDoctor(Doctor doctor) async {
+    final conn = await connection;
+    final result = await conn.execute(
+      Sql.named('INSERT INTO doctors (name, specialization, phone, cabinet) VALUES (@name, @spec, @phone, @cabinet) RETURNING id'),
+      parameters: {
+        'name': doctor.name,
+        'spec': doctor.specialization,
+        'phone': doctor.phone,
+        'cabinet': doctor.cabinet,
+      },
+    );
+    return result.first[0] as int;
+  }
+
+  Future<List<Doctor>> getDoctors() async {
+    final conn = await connection;
+    final result = await conn.execute('SELECT id, name, specialization, phone, cabinet FROM doctors ORDER BY id');
+    
+    return result.map((row) => Doctor(
+      id: row[0] as int,
+      name: row[1] as String,
+      specialization: row[2] as String,
+      phone: row[3] as String?,
+      cabinet: row[4] as String?,
+    )).toList();
   }
 
   // Patient CRUD
@@ -384,12 +442,13 @@ class DatabaseService {
   Future<void> registerUser(User user) async {
     final conn = await connection;
     await conn.execute(
-      Sql.named('INSERT INTO users (login, password, role, patient_id) VALUES (@login, @password, @role, @patientId)'),
+      Sql.named('INSERT INTO users (login, password, role, patient_id, doctor_id) VALUES (@login, @password, @role, @patientId, @doctorId)'),
       parameters: {
         'login': user.login,
         'password': user.password,
         'role': user.role.name,
         'patientId': user.patientId,
+        'doctorId': user.doctorId,
       },
     );
   }
@@ -397,7 +456,7 @@ class DatabaseService {
   Future<User?> loginUser(String login, String password) async {
     final conn = await connection;
     final result = await conn.execute(
-      Sql.named('SELECT id, login, password, role, patient_id FROM users WHERE login = @login AND password = @password'),
+      Sql.named('SELECT id, login, password, role, patient_id, doctor_id FROM users WHERE login = @login AND password = @password'),
       parameters: {
         'login': login,
         'password': password,
@@ -412,6 +471,79 @@ class DatabaseService {
       password: row[2] as String,
       role: UserRole.values.firstWhere((e) => e.name == row[3]),
       patientId: row[4] as int?,
+      doctorId: row[5] as int?,
+    );
+  }
+
+  Future<List<User>> getAllUsers() async {
+    final conn = await connection;
+    final result = await conn.execute('SELECT id, login, password, role, patient_id, doctor_id FROM users ORDER BY id');
+    return result.map((row) => User(
+      id: row[0] as int,
+      login: row[1] as String,
+      password: row[2] as String,
+      role: UserRole.values.firstWhere((e) => e.name == row[3]),
+      patientId: row[4] as int?,
+      doctorId: row[5] as int?,
+    )).toList();
+  }
+
+  Future<void> updateUser(User user) async {
+    final conn = await connection;
+    await conn.execute(
+      Sql.named('UPDATE users SET login = @login, password = @password, role = @role, patient_id = @pId, doctor_id = @dId WHERE id = @id'),
+      parameters: {
+        'login': user.login,
+        'password': user.password,
+        'role': user.role.name,
+        'pId': user.patientId,
+        'dId': user.doctorId,
+        'id': user.id,
+      },
+    );
+  }
+
+  Future<void> deleteUser(int id) async {
+    final conn = await connection;
+    await conn.execute(
+      Sql.named('DELETE FROM users WHERE id = @id'),
+      parameters: {'id': id},
+    );
+  }
+
+  Future<void> updateDoctor(Doctor doctor) async {
+    final conn = await connection;
+    await conn.execute(
+      Sql.named('UPDATE doctors SET name = @name, specialization = @spec, phone = @phone, cabinet = @cabinet WHERE id = @id'),
+      parameters: {
+        'name': doctor.name,
+        'spec': doctor.specialization,
+        'phone': doctor.phone,
+        'cabinet': doctor.cabinet,
+        'id': doctor.id,
+      },
+    );
+  }
+
+  Future<void> deleteDoctor(int id) async {
+    final conn = await connection;
+    await conn.execute(
+      Sql.named('DELETE FROM doctors WHERE id = @id'),
+      parameters: {'id': id},
+    );
+  }
+
+  Future<void> updatePatient(Patient patient) async {
+    final conn = await connection;
+    await conn.execute(
+      Sql.named('UPDATE patients SET name = @name, birth_date = @birth, photo_path = @photo, relative_contact = @contact WHERE id = @id'),
+      parameters: {
+        'name': patient.name,
+        'birth': patient.birthDate,
+        'photo': patient.photoPath,
+        'contact': patient.relativeContact,
+        'id': patient.id,
+      },
     );
   }
 }

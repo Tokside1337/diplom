@@ -3,12 +3,22 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'screens/login_screen.dart';
 
+/// The main entry point for the application.
 void main() {
+  // Ensure that plugin services are initialized before running the app.
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(RehabApp());
+  runApp(const RehabApp());
 }
 
+/// The root widget of the Rehabilitation System application.
+///
+/// This widget configures the global application settings including:
+/// * Theme (Material 3 with Roboto font)
+/// * Localization (Russian)
+/// * Initial screen ([LoginScreen])
 class RehabApp extends StatelessWidget {
+  const RehabApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -22,16 +32,16 @@ class RehabApp extends StatelessWidget {
           elevation: 2,
         ),
       ),
-      localizationsDelegates: [
+      localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: [
+      supportedLocales: const [
         Locale('ru', 'RU'),
       ],
-      locale: Locale('ru', 'RU'),
-      home: LoginScreen(),
+      locale: const Locale('ru', 'RU'),
+      home: const LoginScreen(),
       debugShowCheckedModeBanner: false,
     );
   }

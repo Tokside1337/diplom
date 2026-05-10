@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../models/patient.dart';
-import '../models/medical_models.dart';
-import 'patient_details_screen.dart';
-import 'login_screen.dart';
-import '../services/database_service.dart';
+import 'package:diplom/models/patient.dart';
+import 'package:diplom/models/medical_models.dart';
+import 'package:diplom/screens/patient_details_screen.dart';
+import 'package:diplom/screens/login_screen.dart';
+import 'package:diplom/services/database_service.dart';
 
 class PatientMainScreen extends StatefulWidget {
   final Patient patient;

@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../models/patient.dart';
-import '../services/database_service.dart';
-import 'patient_details_screen.dart';
-import 'login_screen.dart';
+import 'package:diplom/models/patient.dart';
+import 'package:diplom/services/database_service.dart';
+import 'package:diplom/screens/patient_details_screen.dart';
+import 'package:diplom/screens/login_screen.dart';
 
 class PatientListScreen extends StatefulWidget {
+  const PatientListScreen({super.key});
+
   @override
-  _PatientListScreenState createState() => _PatientListScreenState();
+  State<PatientListScreen> createState() => _PatientListScreenState();
 }
 
 class _PatientListScreenState extends State<PatientListScreen> {
@@ -23,20 +25,22 @@ class _PatientListScreenState extends State<PatientListScreen> {
   void _logout() {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => LoginScreen()),
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
     );
   }
 
-  _loadPatients() async {
+  Future<void> _loadPatients() async {
     try {
       final patients = await _dbService.getPatients();
-      setState(() {
-        _patients = patients;
-      });
+      if (mounted) {
+        setState(() {
+          _patients = patients;
+        });
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки данных: \$e')),
+          SnackBar(content: Text('Ошибка загрузки данных: $e')),
         );
       }
     }
@@ -51,76 +55,20 @@ class _PatientListScreenState extends State<PatientListScreen> {
     }
   }
 
-  void _showAddPatientDialog() {
-    final nameController = TextEditingController();
-    final dateController = TextEditingController();
-    final contactController = TextEditingController();
+  // Метод _showAddPatientDialog удален, так как добавление пациентов 
+  // теперь осуществляется через панель администратора.
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Добавить пациента'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: nameController, decoration: InputDecoration(labelText: 'ФИО')),
-              TextField(
-                controller: dateController, 
-                readOnly: true,
-                decoration: InputDecoration(
-                  labelText: 'Дата рождения',
-                  hintText: 'Выберите дату',
-                  suffixIcon: Icon(Icons.calendar_today),
-                ),
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime(1990),
-                    firstDate: DateTime(1900),
-                    lastDate: DateTime.now(),
-                  );
-                  if (picked != null) {
-                    dateController.text = DateFormat('yyyy-MM-dd').format(picked);
-                  }
-                },
-              ),
-              TextField(controller: contactController, decoration: InputDecoration(labelText: 'Контакты родственников')),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('Отмена')),
-          ElevatedButton(
-            onPressed: () async {
-              if (nameController.text.isNotEmpty && dateController.text.isNotEmpty) {
-                await _dbService.insertPatient(Patient(
-                  name: nameController.text,
-                  birthDate: dateController.text,
-                  relativeContact: contactController.text,
-                ));
-                if (mounted) Navigator.pop(context);
-                _loadPatients();
-              }
-            },
-            child: Text('Сохранить'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _deletePatient(int id) async {
+  Future<void> _deletePatient(int id) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Удаление'),
-        content: Text('Вы уверены, что хотите удалить профиль пациента? Все связанные данные (анализы, дневник) будут удалены.'),
+        title: const Text('Удаление'),
+        content: const Text('Вы уверены, что хотите удалить профиль пациента? Все связанные данные (анализы, дневник) будут удалены.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Отмена')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Отмена')),
           TextButton(
             onPressed: () => Navigator.pop(context, true), 
-            child: Text('Удалить', style: TextStyle(color: Colors.red)),
+            child: const Text('Удалить', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -136,17 +84,17 @@ class _PatientListScreenState extends State<PatientListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Цифровые профили пациентов'),
+        title: const Text('Цифровые профили пациентов'),
         actions: [
           IconButton(
-            icon: Icon(Icons.logout),
+            icon: const Icon(Icons.logout),
             onPressed: _logout,
             tooltip: 'Выйти',
           ),
         ],
       ),
       body: _patients.isEmpty 
-        ? Center(child: Text('Список пациентов пуст.'))
+        ? const Center(child: Text('Список пациентов пуст.'))
         : ListView.builder(
             itemCount: _patients.length,
             itemBuilder: (context, index) {
@@ -157,18 +105,18 @@ class _PatientListScreenState extends State<PatientListScreen> {
                 background: Container(
                   color: Colors.red,
                   alignment: Alignment.centerRight,
-                  padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: Icon(Icons.delete, color: Colors.white),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: const Icon(Icons.delete, color: Colors.white),
                 ),
                 confirmDismiss: (direction) async {
-                  _deletePatient(p.id!);
+                  await _deletePatient(p.id!);
                   return false;
                 },
                 child: ListTile(
-                  leading: CircleAvatar(child: Icon(Icons.person)),
+                  leading: const CircleAvatar(child: Icon(Icons.person)),
                   title: Text(p.name),
-                  subtitle: Text('Дата Рождения: ' + _formatDate(p.birthDate)),
-                  trailing: Icon(Icons.chevron_right),
+                  subtitle: Text('Дата Рождения: ${_formatDate(p.birthDate)}'),
+                  trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => PatientDetailsScreen(patient: p, isPatientView: false)),

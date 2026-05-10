@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import '../services/database_service.dart';
+import 'package:diplom/services/database_service.dart';
 
 class CommunicationScreen extends StatefulWidget {
   final int patientId;
   final bool isPatientView;
   
-  CommunicationScreen({required this.patientId, this.isPatientView = false});
+  const CommunicationScreen({super.key, required this.patientId, this.isPatientView = false});
 
   @override
-  _CommunicationScreenState createState() => _CommunicationScreenState();
+  State<CommunicationScreen> createState() => _CommunicationScreenState();
 }
 
 class _CommunicationScreenState extends State<CommunicationScreen> {
@@ -19,7 +19,7 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Консилиум и Заметки')),
+      appBar: AppBar(title: const Text('Консилиум и Заметки')),
       body: Column(
         children: [
           if (!widget.isPatientView) ...[
@@ -37,16 +37,18 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
                   Expanded(
                     child: TextField(
                       controller: _noteController,
-                      decoration: InputDecoration(hintText: 'Введите заметку...'),
+                      decoration: const InputDecoration(hintText: 'Введите заметку...'),
                     ),
                   ),
                   IconButton(
-                    icon: Icon(Icons.send),
+                    icon: const Icon(Icons.send),
                     onPressed: () async {
                       if (_noteController.text.isNotEmpty) {
                         await _dbService.insertNote(widget.patientId, _selectedAuthor, _noteController.text);
                         _noteController.clear();
-                        setState(() {});
+                        if (mounted) {
+                          setState(() {});
+                        }
                       }
                     },
                   )
@@ -57,14 +59,18 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
               child: FutureBuilder<List<Map<String, dynamic>>>(
                 future: _dbService.getNotes(widget.patientId),
                 builder: (context, snapshot) {
-                  if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
-                  if (snapshot.data!.isEmpty) return Center(child: Text('Заметок пока нет'));
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.data!.isEmpty) {
+                    return const Center(child: Text('Заметок пока нет'));
+                  }
                   return ListView.builder(
                     itemCount: snapshot.data!.length,
                     itemBuilder: (context, index) {
                       final note = snapshot.data![index];
                       return ListTile(
-                        title: Text(note['author'], style: TextStyle(fontWeight: FontWeight.bold)),
+                        title: Text(note['author'], style: const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Text(note['content']),
                         trailing: Text(note['timestamp'].toString().substring(11, 16)),
                       );
@@ -79,8 +85,8 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.lock_outline, size: 64, color: Colors.grey),
-                    SizedBox(height: 16),
+                    const Icon(Icons.lock_outline, size: 64, color: Colors.grey),
+                    const SizedBox(height: 16),
                     Text(
                       'Раздел "Заметки консилиума"\nдоступен только медицинскому персоналу',
                       textAlign: TextAlign.center,

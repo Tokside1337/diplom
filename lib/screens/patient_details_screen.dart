@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../models/patient.dart';
-import '../models/medical_models.dart';
-import '../services/database_service.dart';
-import '../services/ai_service.dart';
-import 'questionnaire_screen.dart';
-import 'communication_screen.dart';
-import 'login_screen.dart';
+import 'package:diplom/models/patient.dart';
+import 'package:diplom/models/medical_models.dart';
+import 'package:diplom/services/database_service.dart';
+import 'package:diplom/services/ai_service.dart';
+import 'package:diplom/screens/questionnaire_screen.dart';
+import 'package:diplom/screens/communication_screen.dart';
+import 'package:diplom/screens/login_screen.dart';
 
 class PatientDetailsScreen extends StatefulWidget {
   final Patient patient;

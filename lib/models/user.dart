@@ -1,4 +1,4 @@
-enum UserRole { doctor, patient }
+enum UserRole { doctor, patient, admin }
 
 class User {
   final int? id;
@@ -6,6 +6,7 @@ class User {
   final String password;
   final UserRole role;
   final int? patientId; // null for doctors, linked to patients table for patients
+  final int? doctorId;  // null for patients, linked to doctors table for doctors
 
   User({
     this.id,
@@ -13,6 +14,7 @@ class User {
     required this.password,
     required this.role,
     this.patientId,
+    this.doctorId,
   });
 
   Map<String, dynamic> toMap() {
@@ -22,6 +24,7 @@ class User {
       'password': password,
       'role': role.name,
       'patient_id': patientId,
+      'doctor_id': doctorId,
     };
   }
 
@@ -32,6 +35,7 @@ class User {
       password: map['password'],
       role: UserRole.values.firstWhere((e) => e.name == map['role']),
       patientId: map['patient_id'],
+      doctorId: map['doctor_id'],
     );
   }
 }

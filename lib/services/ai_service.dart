@@ -1,5 +1,5 @@
-import '../models/medical_models.dart';
-import '../models/patient.dart';
+import 'package:diplom/models/medical_models.dart';
+import 'package:diplom/models/patient.dart';
 
 class AIService {
   /// Расширенный анализ тональности текста для русского языка (Rule-based)

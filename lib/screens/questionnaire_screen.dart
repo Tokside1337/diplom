@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import '../services/database_service.dart';
-import '../models/medical_models.dart';
+import 'package:diplom/services/database_service.dart';
+import 'package:diplom/models/medical_models.dart';
 
 class QuestionnaireScreen extends StatefulWidget {
   final int patientId;
-  QuestionnaireScreen({required this.patientId});
+  const QuestionnaireScreen({super.key, required this.patientId});
 
   @override
-  _QuestionnaireScreenState createState() => _QuestionnaireScreenState();
+  State<QuestionnaireScreen> createState() => _QuestionnaireScreenState();
 }
 
 class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
@@ -34,7 +34,9 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
                 Text(_questions[index]['q'], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 Slider(
                   value: _questions[index]['score'].toDouble(),
-                  min: 0, max: 5, divisions: 5,
+                  min: 0, 
+                  max: 5, 
+                  divisions: 5,
                   label: _questions[index]['score'].toString(),
                   onChanged: (val) {
                     setState(() => _questions[index]['score'] = val.toInt());
@@ -64,7 +66,9 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
               date: DateTime.now().toUtc().add(const Duration(hours: 3)).toString(),
             ));
 
-            if (!mounted) return;
+            if (!context.mounted) {
+              return;
+            }
 
             showDialog(
               context: context,
@@ -75,7 +79,9 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
                   TextButton(
                     onPressed: () {
                       Navigator.pop(c);
-                      Navigator.pop(context);
+                      if (mounted) {
+                        Navigator.pop(context);
+                      }
                     }, 
                     child: const Text('OK')
                   )
