@@ -100,3 +100,23 @@ class MoodEntry {
     sentiment: map['sentiment'],
   );
 }
+
+class QuestionnaireResult {
+  final int? id;
+  final int patientId;
+  final String title;
+  final int totalScore;
+  final String date;
+
+  QuestionnaireResult({this.id, required this.patientId, required this.title, required this.totalScore, required this.date});
+
+  Map<String, dynamic> toMap() => {'id': id, 'patientId': patientId, 'title': title, 'totalScore': totalScore, 'date': date};
+
+  factory QuestionnaireResult.fromMap(Map<String, dynamic> map) => QuestionnaireResult(
+    id: map['id'],
+    patientId: map['patientId'],
+    title: map['title'],
+    totalScore: map['totalScore'],
+    date: map['date'],
+  );
+}

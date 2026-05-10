@@ -22,6 +22,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   List<Measurement> _measurements = [];
   List<MoodEntry> _moods = [];
   List<Appointment> _appointments = [];
+  List<QuestionnaireResult> _qResults = [];
   String _trend = 'Загрузка...';
 
   @override
@@ -35,11 +36,13 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       final m = await _dbService.getMeasurements(widget.patient.id!);
       final mood = await _dbService.getMoodEntries(widget.patient.id!);
       final appts = await _dbService.getAppointments(widget.patient.id!);
+      final qres = await _dbService.getQuestionnaireResults(widget.patient.id!);
       if (mounted) {
         setState(() {
           _measurements = m;
           _moods = mood;
           _appointments = appts;
+          _qResults = qres;
           _trend = AIService.analyzeTrend(m);
         });
       }
@@ -274,6 +277,9 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               Text('Рекомендации врача', style: Theme.of(context).textTheme.titleLarge),
               _buildAICard(),
               const SizedBox(height: 24),
+              Text('Результаты опросников', style: Theme.of(context).textTheme.titleLarge),
+              _buildQuestionnaireResults(),
+              const SizedBox(height: 24),
               Text('История настроения', style: Theme.of(context).textTheme.titleLarge),
               _buildMoodList(),
             ],
@@ -339,6 +345,9 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               Text('План мероприятий', style: Theme.of(context).textTheme.titleLarge),
               _buildAppointmentsList(),
               const SizedBox(height: 20),
+              Text('Результаты опросников', style: Theme.of(context).textTheme.titleLarge),
+              _buildQuestionnaireResults(),
+              const SizedBox(height: 20),
               Text('Психологический профиль', style: Theme.of(context).textTheme.titleLarge),
               _buildMoodList(),
             ],
@@ -377,7 +386,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
         ElevatedButton.icon(
           onPressed: () => Navigator.push(
             context, 
-            MaterialPageRoute(builder: (context) => QuestionnaireScreen())
+            MaterialPageRoute(builder: (context) => QuestionnaireScreen(patientId: widget.patient.id!))
           ).then((_) => _loadData()),
           icon: const Icon(Icons.assignment),
           label: const Text('Назначить опросник'),
@@ -596,14 +605,31 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
         return Card(
           child: ListTile(
             leading: Icon(
-              m.sentiment == 'Negative' ? Icons.warning_amber_rounded : Icons.check_circle_outline,
-              color: m.sentiment == 'Negative' ? Colors.orange : Colors.green,
+              m.sentiment == 'CRITICAL' ? Icons.error : (m.sentiment == 'Negative' ? Icons.warning_amber_rounded : Icons.check_circle_outline),
+              color: m.sentiment == 'CRITICAL' ? Colors.red : (m.sentiment == 'Negative' ? Colors.orange : Colors.green),
             ),
             title: Text(m.comment, maxLines: 2, overflow: TextOverflow.ellipsis),
             subtitle: Text('Оценка: ${m.score} | Анализ: ${m.sentiment ?? '...'} | ${m.timestamp.substring(11, 16)}'),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildQuestionnaireResults() {
+    if (_qResults.isEmpty) return const Card(child: ListTile(title: Text('Опросники еще не проходились')));
+    return Column(
+      children: _qResults.map((res) => Card(
+        child: ListTile(
+          leading: const Icon(Icons.assignment_turned_in, color: Colors.blue),
+          title: Text(res.title),
+          subtitle: Text('Балл: ${res.totalScore} | Дата: ${res.date.substring(0, 10)}'),
+          trailing: Icon(
+            res.totalScore > 10 ? Icons.trending_up : Icons.trending_flat,
+            color: res.totalScore > 10 ? Colors.red : Colors.green,
+          ),
+        ),
+      )).toList(),
     );
   }
 }

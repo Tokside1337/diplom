@@ -66,6 +66,27 @@ class DatabaseService {
       )
     ''');
 
+    await conn.execute('''
+      CREATE TABLE IF NOT EXISTS hospitalizations(
+        id SERIAL PRIMARY KEY,
+        patient_id INTEGER REFERENCES patients(id) ON DELETE CASCADE,
+        admission_date TEXT,
+        discharge_date TEXT,
+        reason TEXT,
+        department TEXT
+      )
+    ''');
+
+    await conn.execute('''
+      CREATE TABLE IF NOT EXISTS questionnaire_results(
+        id SERIAL PRIMARY KEY,
+        patient_id INTEGER REFERENCES patients(id) ON DELETE CASCADE,
+        title TEXT,
+        total_score INTEGER,
+        date TEXT
+      )
+    ''');
+
     // 2. Модуль медицинской реабилитации
     await conn.execute('''
       CREATE TABLE IF NOT EXISTS appointments(
@@ -299,6 +320,64 @@ class DatabaseService {
       Sql.named('DELETE FROM appointments WHERE id = @id'),
       parameters: {'id': id},
     );
+  }
+
+  // Questionnaire Results
+  Future<void> insertQuestionnaireResult(QuestionnaireResult res) async {
+    final conn = await connection;
+    await conn.execute(
+      Sql.named('INSERT INTO questionnaire_results (patient_id, title, total_score, date) VALUES (@pId, @title, @score, @date)'),
+      parameters: {
+        'pId': res.patientId,
+        'title': res.title,
+        'score': res.totalScore,
+        'date': res.date,
+      },
+    );
+  }
+
+  Future<List<QuestionnaireResult>> getQuestionnaireResults(int patientId) async {
+    final conn = await connection;
+    final result = await conn.execute(
+      Sql.named('SELECT id, patient_id, title, total_score, date FROM questionnaire_results WHERE patient_id = @pId ORDER BY date DESC'),
+      parameters: {'pId': patientId},
+    );
+    return result.map((row) => QuestionnaireResult(
+      id: row[0] as int,
+      patientId: row[1] as int,
+      title: row[2] as String,
+      totalScore: row[3] as int,
+      date: row[4] as String,
+    )).toList();
+  }
+
+  // Hospitalizations
+  Future<void> insertHospitalization(int patientId, String admission, String discharge, String reason, String dept) async {
+    final conn = await connection;
+    await conn.execute(
+      Sql.named('INSERT INTO hospitalizations (patient_id, admission_date, discharge_date, reason, department) VALUES (@pId, @adm, @dis, @reason, @dept)'),
+      parameters: {
+        'pId': patientId,
+        'adm': admission,
+        'dis': discharge,
+        'reason': reason,
+        'dept': dept,
+      },
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getHospitalizations(int patientId) async {
+    final conn = await connection;
+    final result = await conn.execute(
+      Sql.named('SELECT admission_date, discharge_date, reason, department FROM hospitalizations WHERE patient_id = @pId ORDER BY admission_date DESC'),
+      parameters: {'pId': patientId},
+    );
+    return result.map((row) => {
+      'admission_date': row[0],
+      'discharge_date': row[1],
+      'reason': row[2],
+      'department': row[3],
+    }).toList();
   }
 
   // Users
