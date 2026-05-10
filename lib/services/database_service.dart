@@ -546,4 +546,38 @@ class DatabaseService {
       },
     );
   }
+
+  Future<Doctor?> getDoctorById(int id) async {
+    final conn = await connection;
+    final result = await conn.execute(
+      Sql.named('SELECT id, name, specialization, phone, cabinet FROM doctors WHERE id = @id'),
+      parameters: {'id': id},
+    );
+    if (result.isEmpty) return null;
+    final row = result.first;
+    return Doctor(
+      id: row[0] as int,
+      name: row[1] as String,
+      specialization: row[2] as String,
+      phone: row[3] as String?,
+      cabinet: row[4] as String?,
+    );
+  }
+
+  Future<Patient?> getPatientById(int id) async {
+    final conn = await connection;
+    final result = await conn.execute(
+      Sql.named('SELECT id, name, birth_date, photo_path, relative_contact FROM patients WHERE id = @id'),
+      parameters: {'id': id},
+    );
+    if (result.isEmpty) return null;
+    final row = result.first;
+    return Patient(
+      id: row[0] as int,
+      name: row[1] as String,
+      birthDate: row[2] as String,
+      photoPath: row[3] as String?,
+      relativeContact: row[4] as String,
+    );
+  }
 }

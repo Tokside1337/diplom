@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:diplom/models/user.dart';
 import 'package:diplom/services/database_service.dart';
-import 'package:diplom/screens/patient_list_screen.dart';
 import 'package:diplom/screens/patient_main_screen.dart'; // Изменено на MainScreen
 import 'package:diplom/screens/admin_panel_screen.dart';
+import 'package:diplom/screens/doctor_main_screen.dart';
+import 'package:diplom/models/doctor.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -29,10 +30,22 @@ class _LoginScreenState extends State<LoginScreen> {
       if (user != null) {
         if (!mounted) return;
         if (user.role == UserRole.doctor) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const PatientListScreen()),
-          );
+          Doctor? doctor;
+          if (user.doctorId != null) {
+            doctor = await _dbService.getDoctorById(user.doctorId!);
+          }
+          
+          if (!mounted) return;
+          if (doctor != null) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => DoctorMainScreen(doctor: doctor!)),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Ошибка: Профиль врача не найден')),
+            );
+          }
         } else if (user.role == UserRole.admin) {
           Navigator.pushReplacement(
             context,

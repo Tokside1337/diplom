@@ -6,7 +6,8 @@ import 'package:diplom/screens/patient_details_screen.dart';
 import 'package:diplom/screens/login_screen.dart';
 
 class PatientListScreen extends StatefulWidget {
-  const PatientListScreen({super.key});
+  final bool hideAppBar;
+  const PatientListScreen({super.key, this.hideAppBar = false});
 
   @override
   State<PatientListScreen> createState() => _PatientListScreenState();
@@ -83,7 +84,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: widget.hideAppBar ? null : AppBar(
         title: const Text('Цифровые профили пациентов'),
         actions: [
           IconButton(

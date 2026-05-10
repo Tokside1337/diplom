@@ -48,6 +48,185 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     }
   }
 
+  Future<bool> _confirmDelete(String title, String content) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(content),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Удалить', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
+  void _showEditUserDialog(User user) async {
+    final loginController = TextEditingController(text: user.login);
+    final passwordController = TextEditingController(text: user.password);
+    UserRole selectedRole = user.role;
+
+    // Данные профиля
+    final nameController = TextEditingController();
+    final specController = TextEditingController();
+    final phoneController = TextEditingController();
+    final cabinetController = TextEditingController();
+    final birthDateController = TextEditingController();
+
+    int? profileId = user.role == UserRole.doctor ? user.doctorId : user.patientId;
+
+    if (user.role == UserRole.doctor && user.doctorId != null) {
+      final doc = await _dbService.getDoctorById(user.doctorId!);
+      if (doc != null) {
+        nameController.text = doc.name;
+        specController.text = doc.specialization;
+        phoneController.text = doc.phone ?? '';
+        cabinetController.text = doc.cabinet ?? '';
+      }
+    } else if (user.role == UserRole.patient && user.patientId != null) {
+      final pat = await _dbService.getPatientById(user.patientId!);
+      if (pat != null) {
+        nameController.text = pat.name;
+        birthDateController.text = pat.birthDate;
+      }
+    }
+
+    if (!mounted) return;
+
+    final roleDisplayNames = {
+      UserRole.admin: 'Администратор',
+      UserRole.doctor: 'Врач',
+      UserRole.patient: 'Пациент',
+    };
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Редактировать пользователя'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Данные входа', style: TextStyle(fontWeight: FontWeight.bold)),
+                TextField(controller: loginController, decoration: const InputDecoration(labelText: 'Логин')),
+                TextField(
+                  controller: passwordController,
+                  decoration: const InputDecoration(labelText: 'Пароль'),
+                  obscureText: true,
+                ),
+                DropdownButtonFormField<UserRole>(
+                  initialValue: selectedRole,
+                  items: [UserRole.doctor, UserRole.patient, UserRole.admin].map((role) {
+                    return DropdownMenuItem<UserRole>(
+                      value: role, 
+                      child: Text(roleDisplayNames[role] ?? role.name),
+                    );
+                  }).toList(),
+                  onChanged: (val) => setDialogState(() => selectedRole = val!),
+                  decoration: const InputDecoration(labelText: 'Роль'),
+                ),
+                if (selectedRole != UserRole.admin) ...[
+                  const SizedBox(height: 20),
+                  const Text('Данные профиля', style: TextStyle(fontWeight: FontWeight.bold)),
+                  TextField(controller: nameController, decoration: const InputDecoration(labelText: 'ФИО')),
+                  if (selectedRole == UserRole.doctor) ...[
+                    TextField(controller: specController, decoration: const InputDecoration(labelText: 'Специальность')),
+                    TextField(controller: phoneController, decoration: const InputDecoration(labelText: 'Телефон')),
+                    TextField(controller: cabinetController, decoration: const InputDecoration(labelText: 'Кабинет')),
+                  ],
+                  if (selectedRole == UserRole.patient)
+                    TextField(
+                      controller: birthDateController,
+                      decoration: const InputDecoration(labelText: 'Дата рождения (ГГГГ-ММ-ДД)'),
+                      readOnly: true,
+                      onTap: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.tryParse(birthDateController.text) ?? DateTime(1980),
+                          firstDate: DateTime(1900),
+                          lastDate: DateTime.now(),
+                        );
+                        if (date != null) {
+                          birthDateController.text = DateFormat('yyyy-MM-dd').format(date);
+                        }
+                      },
+                    ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  // 1. Обновляем/Создаем профиль
+                  int? newProfileId = profileId;
+                  if (selectedRole == UserRole.doctor) {
+                    final doc = Doctor(
+                      id: profileId,
+                      name: nameController.text.trim(),
+                      specialization: specController.text.trim(),
+                      phone: phoneController.text.trim(),
+                      cabinet: cabinetController.text.trim(),
+                    );
+                    if (profileId != null && user.role == UserRole.doctor) {
+                      await _dbService.updateDoctor(doc);
+                    } else {
+                      newProfileId = await _dbService.insertDoctor(doc);
+                    }
+                  } else if (selectedRole == UserRole.patient) {
+                    final pat = Patient(
+                      id: profileId,
+                      name: nameController.text.trim(),
+                      birthDate: birthDateController.text.trim(),
+                      relativeContact: 'Авто-создание',
+                    );
+                    if (profileId != null && user.role == UserRole.patient) {
+                      await _dbService.updatePatient(pat);
+                    } else {
+                      newProfileId = await _dbService.insertPatient(pat);
+                    }
+                  }
+
+                  // 2. Обновляем пользователя
+                  final updatedUser = User(
+                    id: user.id,
+                    login: loginController.text.trim(),
+                    password: passwordController.text.trim(),
+                    role: selectedRole,
+                    patientId: selectedRole == UserRole.patient ? newProfileId : null,
+                    doctorId: selectedRole == UserRole.doctor ? newProfileId : null,
+                  );
+                  
+                  await _dbService.updateUser(updatedUser);
+                  
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    _loadData();
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Ошибка обновления: $e')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Сохранить'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showAddUserDialog() {
     final loginController = TextEditingController();
     final passwordController = TextEditingController();
@@ -340,13 +519,28 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         return ListTile(
           title: Text(user.login),
           subtitle: Text('Роль: ${roleDisplayNames[user.role] ?? user.role.name}'),
-          trailing: IconButton(
-            icon: const Icon(Icons.delete, color: Colors.red),
-            onPressed: () async {
-              if (user.login == 'admin') return; // Запрет удаления админа
-              await _dbService.deleteUser(user.id!);
-              _loadData();
-            },
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.edit, color: Colors.blue),
+                onPressed: () => _showEditUserDialog(user),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () async {
+                  if (user.login == 'admin') return; // Запрет удаления админа
+                  final confirmed = await _confirmDelete(
+                    'Удаление пользователя',
+                    'Вы уверены, что хотите удалить пользователя ${user.login}?',
+                  );
+                  if (confirmed) {
+                    await _dbService.deleteUser(user.id!);
+                    _loadData();
+                  }
+                },
+              ),
+            ],
           ),
         );
       },
@@ -364,8 +558,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           trailing: IconButton(
             icon: const Icon(Icons.delete, color: Colors.red),
             onPressed: () async {
-              await _dbService.deletePatient(patient.id!);
-              _loadData();
+              final confirmed = await _confirmDelete(
+                'Удаление профиля',
+                'Вы уверены, что хотите удалить профиль пациента ${patient.name}? Все медицинские данные будут удалены.',
+              );
+              if (confirmed) {
+                await _dbService.deletePatient(patient.id!);
+                _loadData();
+              }
             },
           ),
         );
@@ -384,8 +584,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           trailing: IconButton(
             icon: const Icon(Icons.delete, color: Colors.red),
             onPressed: () async {
-              await _dbService.deleteDoctor(doctor.id!);
-              _loadData();
+              final confirmed = await _confirmDelete(
+                'Удаление профиля',
+                'Вы уверены, что хотите удалить профиль врача ${doctor.name}?',
+              );
+              if (confirmed) {
+                await _dbService.deleteDoctor(doctor.id!);
+                _loadData();
+              }
             },
           ),
         );

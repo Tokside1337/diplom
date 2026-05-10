@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:diplom/models/patient.dart';
-import 'package:diplom/models/medical_models.dart';
-import 'package:diplom/screens/patient_details_screen.dart';
+import 'package:diplom/models/doctor.dart';
+import 'package:diplom/screens/patient_list_screen.dart';
 import 'package:diplom/screens/login_screen.dart';
-import 'package:diplom/services/database_service.dart';
 import 'package:diplom/providers/settings_provider.dart';
 
-class PatientMainScreen extends StatefulWidget {
-  final Patient patient;
-  const PatientMainScreen({super.key, required this.patient});
+class DoctorMainScreen extends StatefulWidget {
+  final Doctor doctor;
+  const DoctorMainScreen({super.key, required this.doctor});
 
   @override
-  State<PatientMainScreen> createState() => _PatientMainScreenState();
+  State<DoctorMainScreen> createState() => _DoctorMainScreenState();
 }
 
-class _PatientMainScreenState extends State<PatientMainScreen> {
+class _DoctorMainScreenState extends State<DoctorMainScreen> {
   int _selectedIndex = 0;
   late List<Widget> _pages;
 
@@ -23,17 +21,18 @@ class _PatientMainScreenState extends State<PatientMainScreen> {
   void initState() {
     super.initState();
     _pages = [
-      PatientDetailsScreen(patient: widget.patient, isPatientView: true, hideNavigation: true),
-      _DiaryTab(patient: widget.patient),
-      _AIChatTab(patient: widget.patient),
-      _ProfileTab(patient: widget.patient),
-      _SettingsTab(),
+      const PatientListScreen(hideAppBar: true),
+      _DoctorScheduleTab(),
+      _DoctorAIChatTab(),
+      _DoctorProfileTab(doctor: widget.doctor),
+      _DoctorSettingsTab(),
     ];
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: _selectedIndex == 0 ? AppBar(title: const Text('Список пациентов')) : null,
       body: IndexedStack(
         index: _selectedIndex,
         children: _pages,
@@ -45,10 +44,10 @@ class _PatientMainScreenState extends State<PatientMainScreen> {
         selectedItemColor: Colors.blue,
         unselectedItemColor: Colors.grey,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Главная'),
-          BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Дневник'),
-          BottomNavigationBarItem(icon: Icon(Icons.psychology), label: 'ИИ Чат'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Профиль'),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Пациенты'),
+          BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: 'График'),
+          BottomNavigationBarItem(icon: Icon(Icons.psychology), label: 'ИИ Помощник'),
+          BottomNavigationBarItem(icon: Icon(Icons.medical_services), label: 'Профиль'),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Настройки'),
         ],
       ),
@@ -56,72 +55,33 @@ class _PatientMainScreenState extends State<PatientMainScreen> {
   }
 }
 
-class _DiaryTab extends StatelessWidget {
-  final Patient patient;
-  const _DiaryTab({required this.patient});
-
+class _DoctorScheduleTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final db = DatabaseService();
     return Scaffold(
-      appBar: AppBar(title: const Text('Дневник здоровья')),
-      body: FutureBuilder(
-        future: Future.wait([
-          db.getMeasurements(patient.id!),
-          db.getMoodEntries(patient.id!),
-        ]),
-        builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-          final measurements = snapshot.data![0] as List<Measurement>;
-          final moods = snapshot.data![1] as List<MoodEntry>;
-
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Text('Последние замеры', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 10),
-              ...measurements.reversed.take(5).map((m) => Card(
-                child: ListTile(
-                  leading: const Icon(Icons.favorite, color: Colors.red),
-                  title: Text('${m.pressureSystolic.toInt()}/${m.pressureDiastolic.toInt()} мм рт.ст.'),
-                  subtitle: Text('Пульс: ${m.pulse} | ${m.timestamp.substring(11, 16)}'),
-                ),
-              )),
-              const SizedBox(height: 24),
-              Text('Записи настроения', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 10),
-              ...moods.reversed.take(5).map((m) => Card(
-                child: ListTile(
-                  leading: Icon(Icons.mood, color: _getMoodColor(m.score)),
-                  title: Text(m.comment),
-                  subtitle: Text('Оценка: ${m.score} | ${m.timestamp.substring(11, 16)}'),
-                ),
-              )),
-            ],
-          );
-        },
+      appBar: AppBar(title: const Text('График приемов')),
+      body: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.event_note, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text('Здесь будет отображаться ваш общий график приемов'),
+          ],
+        ),
       ),
     );
   }
-
-  Color _getMoodColor(int score) {
-    if (score >= 4) return Colors.green;
-    if (score == 3) return Colors.orange;
-    return Colors.red;
-  }
 }
 
-class _AIChatTab extends StatefulWidget {
-  final Patient patient;
-  const _AIChatTab({required this.patient});
-
+class _DoctorAIChatTab extends StatefulWidget {
   @override
-  State<_AIChatTab> createState() => _AIChatTabState();
+  State<_DoctorAIChatTab> createState() => _DoctorAIChatTabState();
 }
 
-class _AIChatTabState extends State<_AIChatTab> {
+class _DoctorAIChatTabState extends State<_DoctorAIChatTab> {
   final List<Map<String, String>> _messages = [
-    {'role': 'ai', 'content': 'Здравствуйте! Я ваш ИИ-консультант. Как вы себя чувствуете сегодня?'}
+    {'role': 'ai', 'content': 'Здравствуйте, коллега! Чем я могу помочь вам в анализе данных пациентов?'}
   ];
   final TextEditingController _controller = TextEditingController();
 
@@ -129,7 +89,7 @@ class _AIChatTabState extends State<_AIChatTab> {
     if (_controller.text.isEmpty) return;
     setState(() {
       _messages.add({'role': 'user', 'content': _controller.text});
-      _messages.add({'role': 'ai', 'content': 'Я проанализировал ваш запрос. Рекомендую придерживаться плана реабилитации и не забывать про отдых.'});
+      _messages.add({'role': 'ai', 'content': 'На основе последних замеров пациента Иванова, наблюдается положительная динамика. Рекомендую продолжать текущий курс терапии.'});
       _controller.clear();
     });
   }
@@ -137,7 +97,7 @@ class _AIChatTabState extends State<_AIChatTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Чат с ИИ')),
+      appBar: AppBar(title: const Text('ИИ Помощник врача')),
       body: Column(
         children: [
           Expanded(
@@ -153,7 +113,7 @@ class _AIChatTabState extends State<_AIChatTab> {
                     margin: const EdgeInsets.symmetric(vertical: 4),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isAi ? Colors.grey[200] : Colors.blue[100],
+                      color: isAi ? Colors.blue.shade50 : Colors.green.shade50,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
@@ -167,7 +127,7 @@ class _AIChatTabState extends State<_AIChatTab> {
             padding: const EdgeInsets.all(8.0),
             child: Row(
               children: [
-                Expanded(child: TextField(controller: _controller, decoration: const InputDecoration(hintText: 'Спросите ИИ...'))),
+                Expanded(child: TextField(controller: _controller, decoration: const InputDecoration(hintText: 'Введите запрос...'))),
                 IconButton(icon: const Icon(Icons.send), onPressed: _sendMessage),
               ],
             ),
@@ -178,55 +138,26 @@ class _AIChatTabState extends State<_AIChatTab> {
   }
 }
 
-class _ProfileTab extends StatelessWidget {
-  final Patient patient;
-  const _ProfileTab({required this.patient});
+class _DoctorProfileTab extends StatelessWidget {
+  final Doctor doctor;
+  const _DoctorProfileTab({required this.doctor});
 
   @override
   Widget build(BuildContext context) {
-    final db = DatabaseService();
     return Scaffold(
       appBar: AppBar(title: const Text('Мой профиль')),
-      body: FutureBuilder(
-        future: Future.wait([
-          db.getHospitalizations(patient.id!),
-          // Здесь можно добавить получение диагнозов, если будет метод в БД
-        ]),
-        builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
-          final hospitalizations = snapshot.hasData ? snapshot.data![0] as List<Map<String, dynamic>> : [];
-          
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              const Center(
-                child: Stack(
-                  children: [
-                    CircleAvatar(radius: 60, child: Icon(Icons.person, size: 60)),
-                    Positioned(bottom: 0, right: 0, child: CircleAvatar(backgroundColor: Colors.blue, radius: 18, child: Icon(Icons.edit, color: Colors.white, size: 18))),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              _buildInfoTile('ФИО', patient.name, Icons.badge),
-              _buildInfoTile('Дата рождения', patient.birthDate, Icons.cake),
-              _buildInfoTile('Контакт близких', patient.relativeContact, Icons.family_restroom),
-              const Divider(height: 40),
-              Text('История госпитализаций', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 12),
-              if (hospitalizations.isEmpty)
-                const Card(child: ListTile(title: Text('Записей о госпитализациях не найдено')))
-              else
-                ...hospitalizations.map((h) => Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.local_hospital, color: Colors.redAccent),
-                    title: Text(h['reason'] ?? 'Причина не указана'),
-                    subtitle: Text('${h['admission_date']} — ${h['discharge_date']}\nОтделение: ${h['department']}'),
-                    isThreeLine: true,
-                  ),
-                )),
-            ],
-          );
-        },
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Center(
+            child: CircleAvatar(radius: 60, child: Icon(Icons.medical_services, size: 60)),
+          ),
+          const SizedBox(height: 24),
+          _buildInfoTile('ФИО', doctor.name, Icons.badge),
+          _buildInfoTile('Специализация', doctor.specialization, Icons.assignment_ind),
+          _buildInfoTile('Телефон', doctor.phone ?? 'Не указан', Icons.phone),
+          _buildInfoTile('Кабинет', doctor.cabinet ?? 'Не указан', Icons.meeting_room),
+        ],
       ),
     );
   }
@@ -240,7 +171,7 @@ class _ProfileTab extends StatelessWidget {
   }
 }
 
-class _SettingsTab extends StatelessWidget {
+class _DoctorSettingsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context);
@@ -303,7 +234,7 @@ class _SettingsTab extends StatelessWidget {
                       Icon(Icons.medical_services, color: Colors.blue, size: 64),
                       SizedBox(height: 16),
                       Text(
-                        'Система Реабилитации',
+                        'Система Реабилитации (Врач)',
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                       ),
                       SizedBox(height: 8),
