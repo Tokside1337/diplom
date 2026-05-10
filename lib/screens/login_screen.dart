@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import '../models/user.dart';
 import '../services/database_service.dart';
 import 'patient_list_screen.dart';
-import 'patient_details_screen.dart';
+import 'patient_main_screen.dart'; // Изменено на MainScreen
 import '../models/patient.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -35,16 +35,16 @@ class _LoginScreenState extends State<LoginScreen> {
             MaterialPageRoute(builder: (context) => PatientListScreen()),
           );
         } else if (user.role == UserRole.patient && user.patientId != null) {
-          // Fetch patient data for the patient user
           final patients = await _dbService.getPatients();
           final patient = patients.firstWhere((p) => p.id == user.patientId);
           
           if (!mounted) return;
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => PatientDetailsScreen(patient: patient, isPatientView: true)),
+            MaterialPageRoute(builder: (context) => PatientMainScreen(patient: patient)),
           );
-        } else {
+        }
+else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Ошибка: Данные пациента не найдены')),
           );

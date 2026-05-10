@@ -11,7 +11,8 @@ import 'login_screen.dart';
 class PatientDetailsScreen extends StatefulWidget {
   final Patient patient;
   final bool isPatientView;
-  const PatientDetailsScreen({super.key, required this.patient, this.isPatientView = false});
+  final bool hideNavigation;
+  const PatientDetailsScreen({super.key, required this.patient, this.isPatientView = false, this.hideNavigation = false});
 
   @override
   State<PatientDetailsScreen> createState() => _PatientDetailsScreenState();
@@ -244,7 +245,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
 
   Widget _buildPatientProfile() {
     return Scaffold(
-      appBar: AppBar(
+      appBar: widget.hideNavigation ? null : AppBar(
         title: const Text('Мой профиль'),
         actions: [
           IconButton(
