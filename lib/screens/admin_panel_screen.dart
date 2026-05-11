@@ -13,17 +13,30 @@ class AdminPanelScreen extends StatefulWidget {
   State<AdminPanelScreen> createState() => _AdminPanelScreenState();
 }
 
-class _AdminPanelScreenState extends State<AdminPanelScreen> {
+class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerProviderStateMixin {
   final _dbService = DatabaseService();
   bool _isLoading = true;
   List<User> _users = [];
   List<Patient> _patients = [];
   List<Doctor> _doctors = [];
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -121,7 +134,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   obscureText: true,
                 ),
                 DropdownButtonFormField<UserRole>(
-                  initialValue: selectedRole,
+                  value: selectedRole,
                   items: [UserRole.doctor, UserRole.patient, UserRole.admin].map((role) {
                     return DropdownMenuItem<UserRole>(
                       value: role, 
@@ -262,7 +275,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   obscureText: true,
                 ),
                 DropdownButtonFormField<UserRole>(
-                  initialValue: selectedRole,
+                  value: selectedRole,
                   items: [UserRole.doctor, UserRole.patient, UserRole.admin].map((role) {
                     return DropdownMenuItem<UserRole>(
                       value: role, 
@@ -355,154 +368,49 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     );
   }
 
-  // Остальные методы _showAddPatientDialog и _showAddDoctorDialog можно оставить для ручного создания без аккаунта
-  void _showAddPatientDialog() {
-    final nameController = TextEditingController();
-    final birthDateController = TextEditingController();
-    final contactController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Добавить пациента'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'ФИО')),
-            TextField(
-              controller: birthDateController,
-              decoration: const InputDecoration(labelText: 'Дата рождения (ГГГГ-ММ-ДД)'),
-              readOnly: true,
-              onTap: () async {
-                final date = await showDatePicker(
-                  context: context,
-                  initialDate: DateTime(1980),
-                  firstDate: DateTime(1900),
-                  lastDate: DateTime.now(),
-                );
-                if (date != null) {
-                  birthDateController.text = DateFormat('yyyy-MM-dd').format(date);
-                }
-              },
-            ),
-            TextField(controller: contactController, decoration: const InputDecoration(labelText: 'Контакт')),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
-            ElevatedButton(
-              onPressed: () async {
-                await _dbService.insertPatient(Patient(
-                  name: nameController.text.trim(),
-                  birthDate: birthDateController.text.trim(),
-                  relativeContact: contactController.text.trim(),
-                ));
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  _loadData();
-                }
-              },
-              child: const Text('Добавить'),
-            ),
-        ],
-      ),
-    );
-  }
-
-  void _showAddDoctorDialog() {
-    final nameController = TextEditingController();
-    final specController = TextEditingController();
-    final phoneController = TextEditingController();
-    final cabinetController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Добавить врача'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'ФИО')),
-            TextField(controller: specController, decoration: const InputDecoration(labelText: 'Специальность')),
-            TextField(controller: phoneController, decoration: const InputDecoration(labelText: 'Телефон')),
-            TextField(controller: cabinetController, decoration: const InputDecoration(labelText: 'Кабинет')),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
-            ElevatedButton(
-              onPressed: () async {
-                await _dbService.insertDoctor(Doctor(
-                  name: nameController.text.trim(),
-                  specialization: specController.text.trim(),
-                  phone: phoneController.text.trim(),
-                  cabinet: cabinetController.text.trim(),
-                ));
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  _loadData();
-                }
-              },
-              child: const Text('Добавить'),
-            ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Панель администратора'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(icon: Icon(Icons.people), text: 'Пользователи'),
-              Tab(icon: Icon(Icons.person), text: 'Пациенты'),
-              Tab(icon: Icon(Icons.medical_services), text: 'Врачи'),
-            ],
-          ),
-          actions: [
-            IconButton(onPressed: _loadData, icon: const Icon(Icons.refresh)),
-            IconButton(
-              icon: const Icon(Icons.logout),
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
-                );
-              },
-              tooltip: 'Выйти',
-            ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Панель администратора'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(icon: Icon(Icons.people), text: 'Пользователи'),
+            Tab(icon: Icon(Icons.person), text: 'Пациенты'),
+            Tab(icon: Icon(Icons.medical_services), text: 'Врачи'),
           ],
         ),
-        body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : TabBarView(
-                children: [
-                  _buildUsersList(),
-                  _buildPatientsList(),
-                  _buildDoctorsList(),
-                ],
-              ),
-        floatingActionButton: Builder(
-          builder: (context) => FloatingActionButton(
+        actions: [
+          IconButton(onPressed: _loadData, icon: const Icon(Icons.refresh)),
+          IconButton(
+            icon: const Icon(Icons.logout),
             onPressed: () {
-              final tabIndex = DefaultTabController.of(context).index;
-              if (tabIndex == 0) {
-                _showAddUserDialog();
-              } else if (tabIndex == 1) {
-                _showAddPatientDialog();
-              } else if (tabIndex == 2) {
-                _showAddDoctorDialog();
-              }
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
+              );
             },
-            child: const Icon(Icons.add),
+            tooltip: 'Выйти',
           ),
-        ),
+        ],
       ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _buildUsersList(),
+                _buildPatientsList(),
+                _buildDoctorsList(),
+              ],
+            ),
+      floatingActionButton: _tabController.index == 0
+          ? FloatingActionButton(
+              onPressed: _showAddUserDialog,
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 

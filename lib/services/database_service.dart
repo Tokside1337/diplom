@@ -17,7 +17,7 @@ class DatabaseService {
   final int _port = 5432;
   final String _databaseName = 'rehab_db';
   final String _username = 'postgres';
-  final String _password = '1337';
+  final String _password = '123456';
 
   Future<Connection> get connection async {
     if (_connection != null && _connection!.isOpen) return _connection!;
