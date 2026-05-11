@@ -137,7 +137,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                   value: selectedRole,
                   items: [UserRole.doctor, UserRole.patient, UserRole.admin].map((role) {
                     return DropdownMenuItem<UserRole>(
-                      value: role, 
+                      value: role,
                       child: Text(roleDisplayNames[role] ?? role.name),
                     );
                   }).toList(),
@@ -217,9 +217,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                     patientId: selectedRole == UserRole.patient ? newProfileId : null,
                     doctorId: selectedRole == UserRole.doctor ? newProfileId : null,
                   );
-                  
+
                   await _dbService.updateUser(updatedUser);
-                  
+
                   if (context.mounted) {
                     Navigator.pop(context);
                     _loadData();
@@ -244,7 +244,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
     final loginController = TextEditingController();
     final passwordController = TextEditingController();
     UserRole selectedRole = UserRole.patient;
-    
+
     // Поля для автоматического создания профиля
     final nameController = TextEditingController();
     final specController = TextEditingController(); // Для врача
@@ -278,7 +278,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                   value: selectedRole,
                   items: [UserRole.doctor, UserRole.patient, UserRole.admin].map((role) {
                     return DropdownMenuItem<UserRole>(
-                      value: role, 
+                      value: role,
                       child: Text(roleDisplayNames[role] ?? role.name),
                     );
                   }).toList(),
@@ -320,7 +320,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
             ElevatedButton(
               onPressed: () async {
                 if (loginController.text.isEmpty || passwordController.text.isEmpty) return;
-                
+
                 try {
                   int? profileId;
                   if (selectedRole == UserRole.doctor) {
@@ -345,9 +345,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                     patientId: selectedRole == UserRole.patient ? profileId : null,
                     doctorId: selectedRole == UserRole.doctor ? profileId : null,
                   );
-                  
+
                   await _dbService.registerUser(user);
-                  
+
                   if (context.mounted) {
                     Navigator.pop(context);
                     _loadData();
@@ -398,19 +398,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : TabBarView(
-              controller: _tabController,
-              children: [
-                _buildUsersList(),
-                _buildPatientsList(),
-                _buildDoctorsList(),
-              ],
-            ),
-      floatingActionButton: _tabController.index == 0
-          ? FloatingActionButton(
-              onPressed: _showAddUserDialog,
-              child: const Icon(Icons.add),
-            )
-          : null,
+        controller: _tabController,
+        children: [
+          _buildUsersList(),
+          _buildPatientsList(),
+          _buildDoctorsList(),
+        ],
+      ),
     );
   }
 
@@ -420,38 +414,68 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
       UserRole.doctor: 'Врач',
       UserRole.patient: 'Пациент',
     };
-    return ListView.builder(
-      itemCount: _users.length,
-      itemBuilder: (context, index) {
-        final user = _users[index];
-        return ListTile(
-          title: Text(user.login),
-          subtitle: Text('Роль: ${roleDisplayNames[user.role] ?? user.role.name}'),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.edit, color: Colors.blue),
-                onPressed: () => _showEditUserDialog(user),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () async {
-                  if (user.login == 'admin') return; // Запрет удаления админа
-                  final confirmed = await _confirmDelete(
-                    'Удаление пользователя',
-                    'Вы уверены, что хотите удалить пользователя ${user.login}?',
-                  );
-                  if (confirmed) {
-                    await _dbService.deleteUser(user.id!);
-                    _loadData();
-                  }
-                },
-              ),
-            ],
+
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            itemCount: _users.length,
+            itemBuilder: (context, index) {
+              final user = _users[index];
+              return ListTile(
+                title: Text(user.login),
+                subtitle: Text('Роль: ${roleDisplayNames[user.role] ?? user.role.name}'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit, color: Colors.blue),
+                      onPressed: () => _showEditUserDialog(user),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () async {
+                        if (user.login == 'admin') return;
+                        final confirmed = await _confirmDelete(
+                          'Удаление пользователя',
+                          'Вы уверены, что хотите удалить пользователя ${user.login}?',
+                        );
+                        if (confirmed) {
+                          await _dbService.deleteUser(user.id!);
+                          _loadData();
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
-        );
-      },
+        ),
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ElevatedButton(
+              onPressed: _showAddUserDialog,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                minimumSize: const Size(200, 48),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.person_add, size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'Добавить пользователя',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
