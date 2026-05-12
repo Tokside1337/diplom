@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:diplom/models/patient.dart';
+import 'package:diplom/models/doctor.dart';
 import 'package:diplom/services/database_service.dart';
 import 'package:diplom/screens/patient_details_screen.dart';
 import 'package:diplom/screens/login_screen.dart';
 
 class PatientListScreen extends StatefulWidget {
   final bool hideAppBar;
-  const PatientListScreen({super.key, this.hideAppBar = false});
+  final Doctor? doctor;
+  const PatientListScreen({super.key, this.hideAppBar = false, this.doctor});
 
   @override
   State<PatientListScreen> createState() => _PatientListScreenState();
@@ -120,7 +122,11 @@ class _PatientListScreenState extends State<PatientListScreen> {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => PatientDetailsScreen(patient: p, isPatientView: false)),
+                    MaterialPageRoute(builder: (context) => PatientDetailsScreen(
+                      patient: p, 
+                      isPatientView: false,
+                      doctor: widget.doctor,
+                    )),
                   ),
                 ),
               );

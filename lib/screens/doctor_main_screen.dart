@@ -21,7 +21,7 @@ class _DoctorMainScreenState extends State<DoctorMainScreen> {
   void initState() {
     super.initState();
     _pages = [
-      const PatientListScreen(hideAppBar: true),
+      PatientListScreen(hideAppBar: true, doctor: widget.doctor),
       _DoctorScheduleTab(),
       _DoctorAIChatTab(),
       _DoctorProfileTab(doctor: widget.doctor),

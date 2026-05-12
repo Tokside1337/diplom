@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:diplom/models/patient.dart';
+import 'package:diplom/models/doctor.dart';
 import 'package:diplom/models/medical_models.dart';
 import 'package:diplom/services/database_service.dart';
 import 'package:diplom/services/ai_service.dart';
@@ -12,7 +13,15 @@ class PatientDetailsScreen extends StatefulWidget {
   final Patient patient;
   final bool isPatientView;
   final bool hideNavigation;
-  const PatientDetailsScreen({super.key, required this.patient, this.isPatientView = false, this.hideNavigation = false});
+  final Doctor? doctor;
+  
+  const PatientDetailsScreen({
+    super.key, 
+    required this.patient, 
+    this.isPatientView = false, 
+    this.hideNavigation = false,
+    this.doctor,
+  });
 
   @override
   State<PatientDetailsScreen> createState() => _PatientDetailsScreenState();
@@ -320,6 +329,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               MaterialPageRoute(builder: (context) => CommunicationScreen(
                 patientId: widget.patient.id!,
                 isPatientView: false,
+                doctor: widget.doctor,
               )),
             ).then((_) => _loadData()),
           ),
