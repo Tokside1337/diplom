@@ -4,6 +4,7 @@ import 'package:diplom/models/doctor.dart';
 import 'package:diplom/screens/patient_list_screen.dart';
 import 'package:diplom/screens/login_screen.dart';
 import 'package:diplom/providers/settings_provider.dart';
+import 'package:diplom/services/ai_service.dart';
 
 class DoctorMainScreen extends StatefulWidget {
   final Doctor doctor;
@@ -84,18 +85,40 @@ class _DoctorAIChatTabState extends State<_DoctorAIChatTab> {
     {'role': 'ai', 'content': 'Здравствуйте, коллега! Чем я могу помочь вам в анализе данных пациентов?'}
   ];
   final TextEditingController _controller = TextEditingController();
+  bool _isLoading = false;
 
-  void _sendMessage() {
-    if (_controller.text.isEmpty) return;
+  Future<void> _sendMessage() async {
+    if (_controller.text.isEmpty || _isLoading) return;
+    
+    final userMessage = _controller.text;
     setState(() {
-      _messages.add({'role': 'user', 'content': _controller.text});
-      _messages.add({'role': 'ai', 'content': 'На основе последних замеров пациента Иванова, наблюдается положительная динамика. Рекомендую продолжать текущий курс терапии.'});
-      _controller.clear();
+      _messages.add({'role': 'user', 'content': userMessage});
+      _isLoading = true;
     });
+    _controller.clear();
+
+    try {
+      final aiResponse = await AIService.chatWithAI(userMessage, 0, isDoctor: true);
+      if (mounted) {
+        setState(() {
+          _messages.add({'role': 'ai', 'content': aiResponse});
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _messages.add({'role': 'ai', 'content': 'Ошибка связи с ИИ-помощником.'});
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(title: const Text('ИИ Помощник врача')),
       body: Column(
@@ -103,8 +126,18 @@ class _DoctorAIChatTabState extends State<_DoctorAIChatTab> {
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
+              itemCount: _messages.length + (_isLoading ? 1 : 0),
               itemBuilder: (context, index) {
+                if (index == _messages.length) {
+                  return const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                    ),
+                  );
+                }
+
                 final m = _messages[index];
                 final isAi = m['role'] == 'ai';
                 return Align(
@@ -113,11 +146,16 @@ class _DoctorAIChatTabState extends State<_DoctorAIChatTab> {
                     margin: const EdgeInsets.symmetric(vertical: 4),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isAi ? Colors.blue.shade50 : Colors.green.shade50,
+                      color: isAi 
+                          ? (isDark ? Colors.blueGrey[800] : Colors.blue.shade50)
+                          : (isDark ? Colors.teal[900] : Colors.green.shade50),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
-                    child: Text(m['content']!),
+                    child: Text(
+                      m['content']!,
+                      style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                    ),
                   ),
                 );
               },
@@ -127,8 +165,21 @@ class _DoctorAIChatTabState extends State<_DoctorAIChatTab> {
             padding: const EdgeInsets.all(8.0),
             child: Row(
               children: [
-                Expanded(child: TextField(controller: _controller, decoration: const InputDecoration(hintText: 'Введите запрос...'))),
-                IconButton(icon: const Icon(Icons.send), onPressed: _sendMessage),
+                Expanded(
+                  child: TextField(
+                    controller: _controller, 
+                    decoration: const InputDecoration(
+                      hintText: 'Введите запрос...',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                    onSubmitted: (_) => _sendMessage(),
+                  )
+                ),
+                IconButton(
+                  icon: const Icon(Icons.send, color: Colors.blue), 
+                  onPressed: _sendMessage
+                ),
               ],
             ),
           )
@@ -153,20 +204,20 @@ class _DoctorProfileTab extends StatelessWidget {
             child: CircleAvatar(radius: 60, child: Icon(Icons.medical_services, size: 60)),
           ),
           const SizedBox(height: 24),
-          _buildInfoTile('ФИО', doctor.name, Icons.badge),
-          _buildInfoTile('Специализация', doctor.specialization, Icons.assignment_ind),
-          _buildInfoTile('Телефон', doctor.phone ?? 'Не указан', Icons.phone),
-          _buildInfoTile('Кабинет', doctor.cabinet ?? 'Не указан', Icons.meeting_room),
+          _buildInfoTile(context, 'ФИО', doctor.name, Icons.badge),
+          _buildInfoTile(context, 'Специализация', doctor.specialization, Icons.assignment_ind),
+          _buildInfoTile(context, 'Телефон', doctor.phone ?? 'Не указан', Icons.phone),
+          _buildInfoTile(context, 'Кабинет', doctor.cabinet ?? 'Не указан', Icons.meeting_room),
         ],
       ),
     );
   }
 
-  Widget _buildInfoTile(String label, String value, IconData icon) {
+  Widget _buildInfoTile(BuildContext context, String label, String value, IconData icon) {
     return ListTile(
       leading: Icon(icon, color: Colors.blue),
       title: Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-      subtitle: Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+      subtitle: Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
     );
   }
 }

@@ -6,10 +6,10 @@ class CommunicationScreen extends StatefulWidget {
   final int patientId;
   final bool isPatientView;
   final Doctor? doctor;
-  
+
   const CommunicationScreen({
-    super.key, 
-    required this.patientId, 
+    super.key,
+    required this.patientId,
     this.isPatientView = false,
     this.doctor,
   });
@@ -36,8 +36,18 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Консилиум и Заметки')),
+      appBar: AppBar(
+        title: Text(
+          'Консилиум и Заметки',
+          style: TextStyle(
+            color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white,
+          ),
+        ),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+      ),
       body: Column(
         children: [
           if (!widget.isPatientView) ...[
@@ -49,7 +59,15 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (snapshot.data!.isEmpty) {
-                    return const Center(child: Text('Заметок пока нет'));
+                    return Center(
+                      child: Text(
+                        'Заметок пока нет',
+                        style: TextStyle(
+                          color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                          fontSize: 16,
+                        ),
+                      ),
+                    );
                   }
                   return ListView.builder(
                     reverse: true,
@@ -70,12 +88,19 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.lock_outline, size: 64, color: Colors.grey),
+                    Icon(
+                      Icons.lock_outline,
+                      size: 64,
+                      color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400,
+                    ),
                     const SizedBox(height: 16),
                     Text(
                       'Раздел "Заметки консилиума"\nдоступен только медицинскому персоналу',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                      style: TextStyle(
+                        color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                        fontSize: 16,
+                      ),
                     ),
                   ],
                 ),
@@ -91,11 +116,13 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
     final List<String> authorParts = authorRaw.split('|');
     final String name = authorParts[0];
     final String specialty = authorParts.length > 1 ? authorParts[1] : '';
-    
+
     final String timestampStr = note['timestamp'].toString();
-    final String time = timestampStr.length >= 16 
-        ? timestampStr.substring(11, 16) 
+    final String time = timestampStr.length >= 16
+        ? timestampStr.substring(11, 16)
         : timestampStr;
+
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Align(
       alignment: Alignment.centerLeft,
@@ -103,7 +130,9 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.blue.shade50,
+          color: isDarkMode
+              ? Colors.blue.shade900.withOpacity(0.4)
+              : Colors.blue.shade50,
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(16),
             topRight: Radius.circular(16),
@@ -111,7 +140,7 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
               blurRadius: 2,
               offset: const Offset(0, 1),
             ),
@@ -123,7 +152,10 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
           children: [
             Text(
               note['content'],
-              style: const TextStyle(fontSize: 15, color: Colors.black87),
+              style: TextStyle(
+                fontSize: 15,
+                color: isDarkMode ? Colors.white : Colors.black87,
+              ),
             ),
             const SizedBox(height: 6),
             Row(
@@ -133,8 +165,8 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
                   child: Text(
                     specialty.isNotEmpty ? '$name ($specialty)' : name,
                     style: TextStyle(
-                      fontSize: 11, 
-                      color: Colors.blue.shade800, 
+                      fontSize: 11,
+                      color: isDarkMode ? Colors.blue.shade200 : Colors.blue.shade800,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -142,7 +174,10 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
                 const SizedBox(width: 8),
                 Text(
                   time,
-                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                  ),
                 ),
               ],
             ),
@@ -153,13 +188,15 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
   }
 
   Widget _buildInputArea() {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.only(left: 16, right: 8, top: 8, bottom: 8),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
             offset: const Offset(0, -1),
             blurRadius: 5,
           ),
@@ -171,8 +208,16 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
             Expanded(
               child: TextField(
                 controller: _noteController,
-                decoration: const InputDecoration(
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white : Colors.black87,
+                  fontSize: 16,
+                ),
+                decoration: InputDecoration(
                   hintText: 'Введите заметку...',
+                  hintStyle: TextStyle(
+                    color: isDarkMode ? Colors.grey.shade500 : Colors.grey.shade400,
+                    fontSize: 16,
+                  ),
                   border: InputBorder.none,
                 ),
                 maxLines: null,
@@ -180,7 +225,10 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.send, color: Colors.blue),
+              icon: Icon(
+                Icons.send,
+                color: Theme.of(context).primaryColor,
+              ),
               onPressed: () async {
                 final content = _noteController.text.trim();
                 if (content.isNotEmpty) {

@@ -5,6 +5,7 @@ import 'package:diplom/models/medical_models.dart';
 import 'package:diplom/screens/patient_details_screen.dart';
 import 'package:diplom/screens/login_screen.dart';
 import 'package:diplom/services/database_service.dart';
+import 'package:diplom/services/ai_service.dart';
 import 'package:diplom/providers/settings_provider.dart';
 
 class PatientMainScreen extends StatefulWidget {
@@ -124,18 +125,40 @@ class _AIChatTabState extends State<_AIChatTab> {
     {'role': 'ai', 'content': 'Здравствуйте! Я ваш ИИ-консультант. Как вы себя чувствуете сегодня?'}
   ];
   final TextEditingController _controller = TextEditingController();
+  bool _isLoading = false;
 
-  void _sendMessage() {
-    if (_controller.text.isEmpty) return;
+  Future<void> _sendMessage() async {
+    if (_controller.text.isEmpty || _isLoading) return;
+    
+    final userMessage = _controller.text;
     setState(() {
-      _messages.add({'role': 'user', 'content': _controller.text});
-      _messages.add({'role': 'ai', 'content': 'Я проанализировал ваш запрос. Рекомендую придерживаться плана реабилитации и не забывать про отдых.'});
-      _controller.clear();
+      _messages.add({'role': 'user', 'content': userMessage});
+      _isLoading = true;
     });
+    _controller.clear();
+
+    try {
+      final aiResponse = await AIService.chatWithAI(userMessage, widget.patient.id!);
+      if (mounted) {
+        setState(() {
+          _messages.add({'role': 'ai', 'content': aiResponse});
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _messages.add({'role': 'ai', 'content': 'Извините, произошла ошибка при связи с ИИ.'});
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Чат с ИИ')),
       body: Column(
@@ -143,8 +166,18 @@ class _AIChatTabState extends State<_AIChatTab> {
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
+              itemCount: _messages.length + (_isLoading ? 1 : 0),
               itemBuilder: (context, index) {
+                if (index == _messages.length) {
+                  return const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                    ),
+                  );
+                }
+                
                 final m = _messages[index];
                 final isAi = m['role'] == 'ai';
                 return Align(
@@ -153,11 +186,16 @@ class _AIChatTabState extends State<_AIChatTab> {
                     margin: const EdgeInsets.symmetric(vertical: 4),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isAi ? Colors.grey[200] : Colors.blue[100],
+                      color: isAi 
+                          ? (isDark ? Colors.grey[800] : Colors.grey[200])
+                          : (isDark ? Colors.blue[900] : Colors.blue[100]),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
-                    child: Text(m['content']!),
+                    child: Text(
+                      m['content']!,
+                      style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                    ),
                   ),
                 );
               },
@@ -167,8 +205,21 @@ class _AIChatTabState extends State<_AIChatTab> {
             padding: const EdgeInsets.all(8.0),
             child: Row(
               children: [
-                Expanded(child: TextField(controller: _controller, decoration: const InputDecoration(hintText: 'Спросите ИИ...'))),
-                IconButton(icon: const Icon(Icons.send), onPressed: _sendMessage),
+                Expanded(
+                  child: TextField(
+                    controller: _controller, 
+                    decoration: const InputDecoration(
+                      hintText: 'Спросите ИИ...',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                    onSubmitted: (_) => _sendMessage(),
+                  )
+                ),
+                IconButton(
+                  icon: const Icon(Icons.send, color: Colors.blue), 
+                  onPressed: _sendMessage
+                ),
               ],
             ),
           )
@@ -190,7 +241,6 @@ class _ProfileTab extends StatelessWidget {
       body: FutureBuilder(
         future: Future.wait([
           db.getHospitalizations(patient.id!),
-          // Здесь можно добавить получение диагнозов, если будет метод в БД
         ]),
         builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
           final hospitalizations = snapshot.hasData ? snapshot.data![0] as List<Map<String, dynamic>> : [];
@@ -207,9 +257,9 @@ class _ProfileTab extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              _buildInfoTile('ФИО', patient.name, Icons.badge),
-              _buildInfoTile('Дата рождения', patient.birthDate, Icons.cake),
-              _buildInfoTile('Контакт близких', patient.relativeContact, Icons.family_restroom),
+              _buildInfoTile(context, 'ФИО', patient.name, Icons.badge),
+              _buildInfoTile(context, 'Дата рождения', patient.birthDate, Icons.cake),
+              _buildInfoTile(context, 'Контакт близких', patient.relativeContact, Icons.family_restroom),
               const Divider(height: 40),
               Text('История госпитализаций', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 12),
@@ -231,11 +281,11 @@ class _ProfileTab extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoTile(String label, String value, IconData icon) {
+  Widget _buildInfoTile(BuildContext context, String label, String value, IconData icon) {
     return ListTile(
       leading: Icon(icon, color: Colors.blue),
       title: Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-      subtitle: Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+      subtitle: Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
     );
   }
 }
