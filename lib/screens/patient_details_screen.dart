@@ -125,6 +125,28 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     return 'Процедура';
   }
 
+  Future<void> _deleteAppointment(int id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Удаление мероприятия'),
+        content: const Text('Вы уверены, что хотите удалить это мероприятие?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true), 
+            child: const Text('Удалить', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _dbService.deleteAppointment(id);
+      _loadData();
+    }
+  }
+
   Future<void> _addAppointment() async {
     final titleController = TextEditingController();
     final typeController = TextEditingController(text: 'Процедура');
@@ -655,13 +677,52 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
 
   Widget _buildAppointmentsList() {
     if (_appointments.isEmpty) return const Card(child: ListTile(title: Text('Мероприятий нет')));
+    final colorScheme = Theme.of(context).colorScheme;
+    
     return Column(
-      children: _appointments.map((app) => Card(
-        elevation: 0,
-        margin: const EdgeInsets.only(bottom: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4))),
-        child: ListTile(title: Text(app.title, style: const TextStyle(fontWeight: FontWeight.bold)), subtitle: Text('${app.doctor} • Каб. ${app.room}')),
-      )).toList(),
+      children: _appointments.map((app) {
+        Color? statusColor;
+        IconData? statusIcon;
+        
+        if (app.status == 'completed') {
+          statusColor = Colors.green;
+          statusIcon = Icons.check_circle_rounded;
+        } else if (app.status == 'missed') {
+          statusColor = Colors.red;
+          statusIcon = Icons.cancel_rounded;
+        } else if (app.status == 'waiting') {
+          statusColor = Colors.orange;
+          statusIcon = Icons.access_time_filled_rounded;
+        }
+
+        return Card(
+          elevation: 0,
+          margin: const EdgeInsets.only(bottom: 8),
+          color: statusColor?.withValues(alpha: 0.08),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16), 
+            side: BorderSide(
+              color: statusColor?.withValues(alpha: 0.4) ?? colorScheme.outlineVariant.withValues(alpha: 0.4)
+            )
+          ),
+          child: ListTile(
+            title: Text(app.title, style: const TextStyle(fontWeight: FontWeight.bold)), 
+            subtitle: Text('${app.doctor} • Каб. ${app.room}'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (statusIcon != null) 
+                  Icon(statusIcon, color: statusColor, size: 20),
+                if (!widget.isPatientView) 
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                    onPressed: () => _deleteAppointment(app.id!),
+                  ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 

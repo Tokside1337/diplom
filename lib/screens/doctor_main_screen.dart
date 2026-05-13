@@ -107,6 +107,19 @@ class _DoctorScheduleTabState extends State<_DoctorScheduleTab> {
     }
   }
 
+  Future<void> _updateStatus(int id, String status) async {
+    try {
+      await _dbService.updateAppointmentStatus(id, status);
+      _loadSchedule();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка обновления статуса: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -149,72 +162,144 @@ class _DoctorScheduleTabState extends State<_DoctorScheduleTab> {
                         final dateTime = DateTime.parse(item['time'] as String);
                         final formattedDate = "${dateTime.day.toString().padLeft(2, '0')}.${dateTime.month.toString().padLeft(2, '0')}.${dateTime.year}";
                         final formattedTime = "${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}";
+                        final status = item['status'] as String? ?? 'pending';
                         
                         return Card(
                           margin: const EdgeInsets.only(bottom: 12),
                           elevation: 0,
+                          clipBehavior: Clip.antiAlias,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                             side: BorderSide(color: colorScheme.outlineVariant.withAlpha(128)),
                           ),
-                          child: ListTile(
-                            leading: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: colorScheme.primaryContainer.withAlpha(102),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(Icons.event_rounded, color: colorScheme.primary),
-                            ),
-                            title: Text(
-                              item['title'] as String, 
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Пациент: ${_formatNameShort(item['patient_name'] as String)}',
-                                  style: const TextStyle(fontWeight: FontWeight.w500),
-                                ),
-                                Text(
-                                  'Кабинет: ${item['room']} • ${item['type']}',
-                                  style: TextStyle(color: colorScheme.onSurfaceVariant),
-                                ),
-                              ],
-                            ),
-                            trailing: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  formattedDate, 
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)
-                                ),
-                                const SizedBox(height: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          child: Column(
+                            children: [
+                              ListTile(
+                                leading: Container(
+                                  padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: colorScheme.secondaryContainer,
-                                    borderRadius: BorderRadius.circular(6),
+                                    color: colorScheme.primaryContainer.withAlpha(102),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: Text(
-                                    formattedTime, 
-                                    style: TextStyle(
-                                      color: colorScheme.onSecondaryContainer, 
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    )
-                                  ),
+                                  child: Icon(Icons.event_rounded, color: colorScheme.primary),
                                 ),
-                              ],
-                            ),
+                                title: Text(
+                                  item['title'] as String, 
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Пациент: ${_formatNameShort(item['patient_name'] as String)}',
+                                      style: const TextStyle(fontWeight: FontWeight.w500),
+                                    ),
+                                    Text(
+                                      'Кабинет: ${item['room']} • ${item['type']}',
+                                      style: TextStyle(color: colorScheme.onSurfaceVariant),
+                                    ),
+                                  ],
+                                ),
+                                trailing: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      formattedDate, 
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.secondaryContainer,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        formattedTime, 
+                                        style: TextStyle(
+                                          color: colorScheme.onSecondaryContainer, 
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        )
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Divider(height: 1, indent: 16, endIndent: 16),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    _StatusButton(
+                                      icon: Icons.check_circle_rounded,
+                                      color: Colors.green,
+                                      label: 'Проведено',
+                                      isActive: status == 'completed',
+                                      onTap: () => _updateStatus(item['id'] as int, 'completed'),
+                                    ),
+                                    _StatusButton(
+                                      icon: Icons.cancel_rounded,
+                                      color: Colors.red,
+                                      label: 'Не проведено',
+                                      isActive: status == 'missed',
+                                      onTap: () => _updateStatus(item['id'] as int, 'missed'),
+                                    ),
+                                    _StatusButton(
+                                      icon: Icons.access_time_filled_rounded,
+                                      color: Colors.orange,
+                                      label: 'Ожидание',
+                                      isActive: status == 'waiting',
+                                      onTap: () => _updateStatus(item['id'] as int, 'waiting'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       },
                     ),
             ),
+    );
+  }
+}
+
+class _StatusButton extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _StatusButton({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, color: isActive ? color : color.withAlpha(128), size: 18),
+      label: Text(
+        label, 
+        style: TextStyle(
+          color: isActive ? color : color.withAlpha(128),
+          fontSize: 11,
+          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+        )
+      ),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        backgroundColor: isActive ? color.withAlpha(26) : null,
+      ),
     );
   }
 }

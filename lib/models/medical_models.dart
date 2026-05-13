@@ -24,10 +24,29 @@ class Appointment {
   final String time;
   final String room;
   final String doctor;
+  final String status; // 'pending', 'completed', 'missed', 'waiting'
 
-  Appointment({this.id, required this.patientId, required this.type, required this.title, required this.time, required this.room, required this.doctor});
+  Appointment({
+    this.id,
+    required this.patientId,
+    required this.type,
+    required this.title,
+    required this.time,
+    required this.room,
+    required this.doctor,
+    this.status = 'pending',
+  });
 
-  Map<String, dynamic> toMap() => {'id': id, 'patientId': patientId, 'type': type, 'title': title, 'time': time, 'room': room, 'doctor': doctor};
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'patientId': patientId,
+    'type': type,
+    'title': title,
+    'time': time,
+    'room': room,
+    'doctor': doctor,
+    'status': status,
+  };
 
   factory Appointment.fromMap(Map<String, dynamic> map) => Appointment(
     id: map['id'],
@@ -37,6 +56,7 @@ class Appointment {
     time: map['time'],
     room: map['room'],
     doctor: map['doctor'],
+    status: map['status'] ?? 'pending',
   );
 }
 

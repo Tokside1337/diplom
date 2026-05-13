@@ -108,9 +108,17 @@ class DatabaseService {
         title TEXT,
         time TEXT,
         room TEXT,
-        doctor TEXT
+        doctor TEXT,
+        status TEXT DEFAULT 'pending'
       )
     ''');
+
+    // Migration for existing table
+    try {
+      await conn.execute("ALTER TABLE appointments ADD COLUMN status TEXT DEFAULT 'pending'");
+    } catch (e) {
+      // Column might already exist
+    }
 
     await conn.execute('''
       CREATE TABLE IF NOT EXISTS measurements(
@@ -336,7 +344,7 @@ class DatabaseService {
   Future<void> insertAppointment(Appointment app) async {
     final conn = await connection;
     await conn.execute(
-      Sql.named('INSERT INTO appointments (patient_id, type, title, time, room, doctor) VALUES (@pId, @type, @title, @time, @room, @doctor)'),
+      Sql.named('INSERT INTO appointments (patient_id, type, title, time, room, doctor, status) VALUES (@pId, @type, @title, @time, @room, @doctor, @status)'),
       parameters: {
         'pId': app.patientId,
         'type': app.type,
@@ -344,16 +352,15 @@ class DatabaseService {
         'time': app.time,
         'room': app.room,
         'doctor': app.doctor,
+        'status': app.status,
       },
     );
   }
 
   Future<List<Appointment>> getAppointments(int patientId) async {
     final conn = await connection;
-    // Удаление прошедших мероприятий убрано по просьбе пользователя для корректного отображения
-    
     final result = await conn.execute(
-      Sql.named('SELECT id, patient_id, type, title, time, room, doctor FROM appointments WHERE patient_id = @pId ORDER BY time ASC'),
+      Sql.named('SELECT id, patient_id, type, title, time, room, doctor, status FROM appointments WHERE patient_id = @pId ORDER BY time ASC'),
       parameters: {'pId': patientId},
     );
     return result.map((row) => Appointment(
@@ -364,14 +371,26 @@ class DatabaseService {
       time: row[4] as String,
       room: row[5] as String,
       doctor: row[6] as String,
+      status: row[7] as String? ?? 'pending',
     )).toList();
+  }
+
+  Future<void> updateAppointmentStatus(int id, String status) async {
+    final conn = await connection;
+    await conn.execute(
+      Sql.named('UPDATE appointments SET status = @status WHERE id = @id'),
+      parameters: {
+        'status': status,
+        'id': id,
+      },
+    );
   }
 
   Future<List<Map<String, dynamic>>> getDoctorSchedule(String doctorName) async {
     final conn = await connection;
     final result = await conn.execute(
       Sql.named('''
-        SELECT a.id, a.type, a.title, a.time, a.room, p.name as patient_name 
+        SELECT a.id, a.type, a.title, a.time, a.room, p.name as patient_name, a.status 
         FROM appointments a 
         JOIN patients p ON a.patient_id = p.id 
         WHERE TRIM(a.doctor) ILIKE TRIM(@doctorName) 
@@ -386,6 +405,7 @@ class DatabaseService {
       'time': row[3],
       'room': row[4],
       'patient_name': row[5],
+      'status': row[6] ?? 'pending',
     }).toList();
   }
 
