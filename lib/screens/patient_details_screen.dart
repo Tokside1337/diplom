@@ -76,6 +76,18 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     _loadData();
   }
 
+  String _formatNameShort(String fullName) {
+    if (fullName.isEmpty) return "";
+    if (fullName.contains('.')) return fullName;
+    List<String> parts = fullName.trim().split(RegExp(r'\s+'));
+    if (parts.length >= 3) {
+      return "${parts[0]} ${parts[1][0]}.${parts[2][0]}.";
+    } else if (parts.length == 2) {
+      return "${parts[0]} ${parts[1][0]}.";
+    }
+    return fullName;
+  }
+
   Future<void> _loadData() async {
     try {
       final m = await _dbService.getMeasurements(widget.patient.id!);
@@ -472,7 +484,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   Widget _buildDoctorView() {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Пациент: ${widget.patient.name}'),
+        title: Text('Пациент: ${_formatNameShort(widget.patient.name)}'),
         actions: [
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline_rounded),
@@ -576,7 +588,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         leading: CircleAvatar(backgroundColor: colorScheme.primaryContainer, child: Icon(Icons.person_rounded, color: colorScheme.onPrimaryContainer)),
-        title: Text(widget.patient.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(_formatNameShort(widget.patient.name), style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text('Дата рождения: ${widget.patient.birthDate}'),
       ),
     );
