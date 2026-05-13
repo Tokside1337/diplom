@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:diplom/models/patient.dart';
@@ -348,9 +349,9 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     return _buildDoctorView();
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, {double bottomMargin = 8}) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: bottomMargin),
       child: Center(
         child: Text(
           title,
@@ -388,8 +389,8 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildPatientHeader(),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Мои показатели давления (Верхнее и нижнее)'),
+              const SizedBox(height: 20),
+              _buildSectionTitle('Мои показатели давления'),
               _buildChart(),
               const SizedBox(height: 10),
               _buildMeasurementsDetails(),
@@ -403,29 +404,71 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               _buildSectionTitle('Результаты опросников'),
               _buildQuestionnaireResults(),
               const SizedBox(height: 24),
-              _buildSectionTitle('История настроения'),
+              _buildSectionTitle('История настроения', bottomMargin: 2),
               _buildMoodList(),
+              const SizedBox(height: 80), // Увеличенный отступ, чтобы кнопки не заслоняли текст
             ],
           ),
         ),
       ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton.extended(
-            heroTag: 'mood',
-            onPressed: _addMood,
-            label: const Text('Дневник'),
-            icon: const Icon(Icons.mood),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(30),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+            child: Container(
+              height: 60,
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.light
+                    ? Colors.white.withOpacity(0.4)
+                    : Colors.black.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(
+                  color: Theme.of(context).dividerColor.withOpacity(0.2),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: _addMood,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.mood, color: Theme.of(context).colorScheme.primary),
+                          const SizedBox(width: 8),
+                          const Text('Дневник', style: TextStyle(fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  VerticalDivider(
+                    width: 1,
+                    thickness: 1,
+                    indent: 15,
+                    endIndent: 15,
+                    color: Theme.of(context).dividerColor.withOpacity(0.3),
+                  ),
+                  Expanded(
+                    child: InkWell(
+                      onTap: _addMeasurement,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_chart, color: Theme.of(context).colorScheme.secondary),
+                          const SizedBox(width: 8),
+                          const Text('Замер', style: TextStyle(fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 10),
-          FloatingActionButton.extended(
-            heroTag: 'measure',
-            onPressed: _addMeasurement,
-            label: const Text('Замер давления'),
-            icon: const Icon(Icons.add_chart),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -460,20 +503,21 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               const SizedBox(height: 20),
               _buildSectionTitle('Аналитика ИИ и Прогноз'),
               _buildAICard(),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               _buildSectionTitle('График давления'),
               _buildChart(),
               const SizedBox(height: 10),
               _buildMeasurementsDetails(),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               _buildSectionTitle('План мероприятий'),
               _buildAppointmentsList(),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               _buildSectionTitle('Результаты опросников'),
               _buildQuestionnaireResults(),
-              const SizedBox(height: 20),
-              _buildSectionTitle('Психологический профиль'),
+              const SizedBox(height: 24),
+              _buildSectionTitle('Психологический профиль', bottomMargin: 2),
               _buildMoodList(),
+              const SizedBox(height: 80), // Увеличенный отступ для врача тоже
             ],
           ),
         ),
@@ -482,6 +526,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
         onPressed: _addMeasurement,
         label: const Text('Добавить замер'),
         icon: const Icon(Icons.add),
+        backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.6),
       ),
     );
   }
@@ -857,6 +902,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     if (_moods.isEmpty) return const Center(child: Text('Дневник пуст'));
     return ListView.builder(
       shrinkWrap: true,
+      padding: EdgeInsets.zero,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: _moods.length > 5 ? 5 : _moods.length,
       itemBuilder: (context, index) {
