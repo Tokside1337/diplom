@@ -467,6 +467,71 @@ class _DoctorProfileTab extends StatelessWidget {
 }
 
 class _DoctorSettingsTab extends StatelessWidget {
+  void _showAbout(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        contentPadding: EdgeInsets.zero,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.medical_services_rounded, size: 64, color: colorScheme.primary),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Система РеСтарт',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                    Text(
+                      'Версия 1.0.0',
+                      style: TextStyle(color: colorScheme.onPrimaryContainer.withOpacity(0.7)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  const Text(
+                    'Специализированная система для мониторинга состояния пациентов и поддержки принятия врачебных решений.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Разработано для медицинского персонала, 2026',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Закрыть'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context);
@@ -499,7 +564,7 @@ class _DoctorSettingsTab extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.info_outline_rounded),
             title: const Text('О приложении'),
-            onTap: () {},
+            onTap: () => _showAbout(context),
           ),
           ListTile(
             leading: const Icon(Icons.logout_rounded, color: Colors.red),
