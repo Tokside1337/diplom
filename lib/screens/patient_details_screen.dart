@@ -406,7 +406,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               const SizedBox(height: 24),
               _buildSectionTitle('История настроения', bottomMargin: 2),
               _buildMoodList(),
-              const SizedBox(height: 80), // Увеличенный отступ, чтобы кнопки не заслоняли текст
+              const SizedBox(height: 80),
             ],
           ),
         ),
@@ -499,8 +499,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildDoctorControls(),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
               _buildSectionTitle('Аналитика ИИ и Прогноз'),
               _buildAICard(),
               const SizedBox(height: 24),
@@ -517,16 +516,72 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               const SizedBox(height: 24),
               _buildSectionTitle('Психологический профиль', bottomMargin: 2),
               _buildMoodList(),
-              const SizedBox(height: 80), // Увеличенный отступ для врача тоже
+              const SizedBox(height: 80),
             ],
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _addMeasurement,
-        label: const Text('Добавить замер'),
-        icon: const Icon(Icons.add),
-        backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.6),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(30),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+            child: Container(
+              height: 60,
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.light
+                    ? Colors.white.withOpacity(0.4)
+                    : Colors.black.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(
+                  color: Theme.of(context).dividerColor.withOpacity(0.2),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: _addAppointment,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.event, color: Colors.orange),
+                          const SizedBox(width: 8),
+                          const Text('Мероприятие', style: TextStyle(fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  VerticalDivider(
+                    width: 1,
+                    thickness: 1,
+                    indent: 15,
+                    endIndent: 15,
+                    color: Theme.of(context).dividerColor.withOpacity(0.3),
+                  ),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => QuestionnaireScreen(patientId: widget.patient.id!))
+                      ).then((_) => _loadData()),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.assignment, color: Colors.blue),
+                          const SizedBox(width: 8),
+                          const Text('Опросник', style: TextStyle(fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -550,30 +605,6 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildDoctorControls() {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: [
-        ElevatedButton.icon(
-          onPressed: _addAppointment,
-          icon: const Icon(Icons.event),
-          label: const Text('Назначить мероприятие'),
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade50),
-        ),
-        ElevatedButton.icon(
-          onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => QuestionnaireScreen(patientId: widget.patient.id!))
-          ).then((_) => _loadData()),
-          icon: const Icon(Icons.assignment),
-          label: const Text('Назначить опросник'),
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.blue.shade50),
-        ),
-      ],
     );
   }
 
