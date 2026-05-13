@@ -1,5 +1,18 @@
 enum UserRole { doctor, patient, admin }
 
+extension UserRoleExtension on UserRole {
+  String get displayName {
+    switch (this) {
+      case UserRole.doctor:
+        return 'Врач';
+      case UserRole.patient:
+        return 'Пациент';
+      case UserRole.admin:
+        return 'Администратор';
+    }
+  }
+}
+
 class User {
   final int? id;
   final String login;

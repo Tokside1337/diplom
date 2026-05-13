@@ -27,7 +27,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
-        setState(() {});
+        setState(() {}); // Обновляем UI для скрытия/показа FAB
       }
     });
     _loadData();
@@ -40,24 +40,25 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
   }
 
   Future<void> _loadData() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     try {
       final users = await _dbService.getAllUsers();
       final patients = await _dbService.getPatients();
       final doctors = await _dbService.getDoctors();
-      setState(() {
-        _users = users;
-        _patients = patients;
-        _doctors = doctors;
-      });
+      if (mounted) {
+        setState(() {
+          _users = users;
+          _patients = patients;
+          _doctors = doctors;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки данных: $e')),
-        );
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка загрузки: $e')));
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -69,117 +70,232 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
         content: Text(content),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Отмена')),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Удалить', style: TextStyle(color: Colors.red)),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Удалить', style: TextStyle(color: Colors.red))),
         ],
       ),
     );
     return result ?? false;
   }
 
-  void _showEditUserDialog(User user) async {
-    final loginController = TextEditingController(text: user.login);
-    final passwordController = TextEditingController(text: user.password);
-    UserRole selectedRole = user.role;
+  Widget _buildField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool obscureText = false,
+    bool readOnly = false,
+    VoidCallback? onTap,
+    TextInputType? keyboardType,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      readOnly: readOnly,
+      onTap: onTap,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, size: 22),
+        filled: true,
+        fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
+        ),
+      ),
+    );
+  }
 
-    // Данные профиля
+  void _showUserDialog({User? user}) async {
+    final isEditing = user != null;
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    final loginController = TextEditingController(text: user?.login);
+    final passwordController = TextEditingController(text: user?.password);
+    UserRole selectedRole = user?.role ?? UserRole.patient;
+
     final nameController = TextEditingController();
     final specController = TextEditingController();
     final phoneController = TextEditingController();
     final cabinetController = TextEditingController();
     final birthDateController = TextEditingController();
 
-    int? profileId = user.role == UserRole.doctor ? user.doctorId : user.patientId;
+    int? profileId = isEditing ? (user.role == UserRole.doctor ? user.doctorId : user.patientId) : null;
 
-    if (user.role == UserRole.doctor && user.doctorId != null) {
-      final doc = await _dbService.getDoctorById(user.doctorId!);
-      if (doc != null) {
-        nameController.text = doc.name;
-        specController.text = doc.specialization;
-        phoneController.text = doc.phone ?? '';
-        cabinetController.text = doc.cabinet ?? '';
-      }
-    } else if (user.role == UserRole.patient && user.patientId != null) {
-      final pat = await _dbService.getPatientById(user.patientId!);
-      if (pat != null) {
-        nameController.text = pat.name;
-        birthDateController.text = pat.birthDate;
+    if (isEditing) {
+      if (user.role == UserRole.doctor && user.doctorId != null) {
+        final doc = await _dbService.getDoctorById(user.doctorId!);
+        if (doc != null) {
+          nameController.text = doc.name;
+          specController.text = doc.specialization;
+          phoneController.text = doc.phone ?? '';
+          cabinetController.text = doc.cabinet ?? '';
+        }
+      } else if (user.role == UserRole.patient && user.patientId != null) {
+        final pat = await _dbService.getPatientById(user.patientId!);
+        if (pat != null) {
+          nameController.text = pat.name;
+          birthDateController.text = pat.birthDate;
+        }
       }
     }
 
     if (!mounted) return;
 
-    final roleDisplayNames = {
-      UserRole.admin: 'Администратор',
-      UserRole.doctor: 'Врач',
-      UserRole.patient: 'Пациент',
-    };
-
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Редактировать пользователя'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Данные входа', style: TextStyle(fontWeight: FontWeight.bold)),
-                TextField(controller: loginController, decoration: const InputDecoration(labelText: 'Логин')),
-                TextField(
-                  controller: passwordController,
-                  decoration: const InputDecoration(labelText: 'Пароль'),
-                  obscureText: true,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                DropdownButtonFormField<UserRole>(
-                  value: selectedRole,
-                  items: [UserRole.doctor, UserRole.patient, UserRole.admin].map((role) {
-                    return DropdownMenuItem<UserRole>(
-                      value: role,
-                      child: Text(roleDisplayNames[role] ?? role.name),
-                    );
-                  }).toList(),
-                  onChanged: (val) => setDialogState(() => selectedRole = val!),
-                  decoration: const InputDecoration(labelText: 'Роль'),
+                child: Icon(
+                  isEditing ? Icons.edit_note_rounded : Icons.person_add_rounded,
+                  color: colorScheme.onPrimaryContainer,
+                  size: 24,
                 ),
-                if (selectedRole != UserRole.admin) ...[
-                  const SizedBox(height: 20),
-                  const Text('Данные профиля', style: TextStyle(fontWeight: FontWeight.bold)),
-                  TextField(controller: nameController, decoration: const InputDecoration(labelText: 'ФИО')),
-                  if (selectedRole == UserRole.doctor) ...[
-                    TextField(controller: specController, decoration: const InputDecoration(labelText: 'Специальность')),
-                    TextField(controller: phoneController, decoration: const InputDecoration(labelText: 'Телефон')),
-                    TextField(controller: cabinetController, decoration: const InputDecoration(labelText: 'Кабинет')),
-                  ],
-                  if (selectedRole == UserRole.patient)
-                    TextField(
-                      controller: birthDateController,
-                      decoration: const InputDecoration(labelText: 'Дата рождения (ГГГГ-ММ-ДД)'),
-                      readOnly: true,
-                      onTap: () async {
-                        final date = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime.tryParse(birthDateController.text) ?? DateTime(1980),
-                          firstDate: DateTime(1900),
-                          lastDate: DateTime.now(),
-                        );
-                        if (date != null) {
-                          birthDateController.text = DateFormat('yyyy-MM-dd').format(date);
-                        }
-                      },
+              ),
+              const SizedBox(width: 16),
+              Text(
+                isEditing ? 'Редактирование' : 'Новый профиль',
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 400,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _dialogSectionTitle(context, 'ДАННЫЕ АККАУНТА'),
+                  _buildField(
+                    controller: loginController,
+                    label: 'Логин',
+                    icon: Icons.person_outline_rounded,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildField(
+                    controller: passwordController,
+                    label: 'Пароль',
+                    icon: Icons.lock_outline_rounded,
+                    obscureText: true,
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<UserRole>(
+                    value: selectedRole,
+                    decoration: InputDecoration(
+                      labelText: 'Роль',
+                      prefixIcon: const Icon(Icons.shield_outlined, size: 22),
+                      filled: true,
+                      fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
+                    items: UserRole.values.map((role) => DropdownMenuItem(
+                      value: role,
+                      child: Text(role.displayName),
+                    )).toList(),
+                    onChanged: (val) => setDialogState(() => selectedRole = val!),
+                  ),
+                  if (selectedRole != UserRole.admin) ...[
+                    const SizedBox(height: 24),
+                    _dialogSectionTitle(context, 'ЛИЧНЫЕ ДАННЫЕ'),
+                    _buildField(
+                      controller: nameController,
+                      label: 'ФИО',
+                      icon: Icons.face_rounded,
+                    ),
+                    if (selectedRole == UserRole.doctor) ...[
+                      const SizedBox(height: 12),
+                      _buildField(
+                        controller: specController,
+                        label: 'Специальность',
+                        icon: Icons.medical_services_outlined,
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildField(
+                              controller: phoneController,
+                              label: 'Телефон',
+                              icon: Icons.phone_outlined,
+                              keyboardType: TextInputType.phone,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          SizedBox(
+                            width: 110,
+                            child: _buildField(
+                              controller: cabinetController,
+                              label: 'Каб.',
+                              icon: Icons.meeting_room_outlined,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (selectedRole == UserRole.patient) ...[
+                      const SizedBox(height: 12),
+                      _buildField(
+                        controller: birthDateController,
+                        label: 'Дата рождения',
+                        icon: Icons.cake_outlined,
+                        readOnly: true,
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime(1990),
+                            firstDate: DateTime(1900),
+                            lastDate: DateTime.now(),
+                          );
+                          if (date != null) {
+                            birthDateController.text = DateFormat('yyyy-MM-dd').format(date);
+                          }
+                        },
+                      ),
+                    ],
+                  ],
+                  const SizedBox(height: 16),
                 ],
-              ],
+              ),
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
-            ElevatedButton(
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Отмена'),
+            ),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              ),
               onPressed: () async {
                 try {
-                  // 1. Обновляем/Создаем профиль
                   int? newProfileId = profileId;
                   if (selectedRole == UserRole.doctor) {
                     final doc = Doctor(
@@ -189,8 +305,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                       phone: phoneController.text.trim(),
                       cabinet: cabinetController.text.trim(),
                     );
-                    if (profileId != null && user.role == UserRole.doctor) {
+                    if (isEditing && user.role == UserRole.doctor) {
                       await _dbService.updateDoctor(doc);
+                      newProfileId = profileId;
                     } else {
                       newProfileId = await _dbService.insertDoctor(doc);
                     }
@@ -199,18 +316,18 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                       id: profileId,
                       name: nameController.text.trim(),
                       birthDate: birthDateController.text.trim(),
-                      relativeContact: 'Авто-создание',
+                      relativeContact: 'Указано при регистрации',
                     );
-                    if (profileId != null && user.role == UserRole.patient) {
+                    if (isEditing && user.role == UserRole.patient) {
                       await _dbService.updatePatient(pat);
+                      newProfileId = profileId;
                     } else {
                       newProfileId = await _dbService.insertPatient(pat);
                     }
                   }
 
-                  // 2. Обновляем пользователя
-                  final updatedUser = User(
-                    id: user.id,
+                  final userData = User(
+                    id: user?.id,
                     login: loginController.text.trim(),
                     password: passwordController.text.trim(),
                     role: selectedRole,
@@ -218,7 +335,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                     doctorId: selectedRole == UserRole.doctor ? newProfileId : null,
                   );
 
-                  await _dbService.updateUser(updatedUser);
+                  if (isEditing) {
+                    await _dbService.updateUser(userData);
+                  } else {
+                    await _dbService.registerUser(userData);
+                  }
 
                   if (context.mounted) {
                     Navigator.pop(context);
@@ -226,13 +347,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                   }
                 } catch (e) {
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Ошибка обновления: $e')),
-                    );
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
                   }
                 }
               },
-              child: const Text('Сохранить'),
+              icon: Icon(isEditing ? Icons.check_rounded : Icons.person_add_rounded, size: 18),
+              label: Text(isEditing ? 'Сохранить' : 'Создать'),
             ),
           ],
         ),
@@ -240,129 +360,16 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
     );
   }
 
-  void _showAddUserDialog() {
-    final loginController = TextEditingController();
-    final passwordController = TextEditingController();
-    UserRole selectedRole = UserRole.patient;
-
-    // Поля для автоматического создания профиля
-    final nameController = TextEditingController();
-    final specController = TextEditingController(); // Для врача
-    final phoneController = TextEditingController(); // Для врача
-    final cabinetController = TextEditingController(); // Для врача
-    final birthDateController = TextEditingController(); // Для пациента
-
-    final roleDisplayNames = {
-      UserRole.admin: 'Администратор',
-      UserRole.doctor: 'Врач',
-      UserRole.patient: 'Пациент',
-    };
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Создать аккаунт и профиль'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Данные входа', style: TextStyle(fontWeight: FontWeight.bold)),
-                TextField(controller: loginController, decoration: const InputDecoration(labelText: 'Логин')),
-                TextField(
-                  controller: passwordController,
-                  decoration: const InputDecoration(labelText: 'Пароль'),
-                  obscureText: true,
-                ),
-                DropdownButtonFormField<UserRole>(
-                  value: selectedRole,
-                  items: [UserRole.doctor, UserRole.patient, UserRole.admin].map((role) {
-                    return DropdownMenuItem<UserRole>(
-                      value: role,
-                      child: Text(roleDisplayNames[role] ?? role.name),
-                    );
-                  }).toList(),
-                  onChanged: (val) => setDialogState(() => selectedRole = val!),
-                  decoration: const InputDecoration(labelText: 'Роль'),
-                ),
-                if (selectedRole != UserRole.admin) ...[
-                  const SizedBox(height: 20),
-                  const Text('Данные профиля', style: TextStyle(fontWeight: FontWeight.bold)),
-                  TextField(controller: nameController, decoration: const InputDecoration(labelText: 'ФИО')),
-                  if (selectedRole == UserRole.doctor) ...[
-                    TextField(controller: specController, decoration: const InputDecoration(labelText: 'Специальность')),
-                    TextField(controller: phoneController, decoration: const InputDecoration(labelText: 'Телефон')),
-                    TextField(controller: cabinetController, decoration: const InputDecoration(labelText: 'Кабинет')),
-                  ],
-                  if (selectedRole == UserRole.patient)
-                    TextField(
-                      controller: birthDateController,
-                      decoration: const InputDecoration(labelText: 'Дата рождения (ГГГГ-ММ-ДД)'),
-                      readOnly: true,
-                      onTap: () async {
-                        final date = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime(1980),
-                          firstDate: DateTime(1900),
-                          lastDate: DateTime.now(),
-                        );
-                        if (date != null) {
-                          birthDateController.text = DateFormat('yyyy-MM-dd').format(date);
-                        }
-                      },
-                    ),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
-            ElevatedButton(
-              onPressed: () async {
-                if (loginController.text.isEmpty || passwordController.text.isEmpty) return;
-
-                try {
-                  int? profileId;
-                  if (selectedRole == UserRole.doctor) {
-                    profileId = await _dbService.insertDoctor(Doctor(
-                      name: nameController.text.trim(),
-                      specialization: specController.text.trim(),
-                      phone: phoneController.text.trim(),
-                      cabinet: cabinetController.text.trim(),
-                    ));
-                  } else if (selectedRole == UserRole.patient) {
-                    profileId = await _dbService.insertPatient(Patient(
-                      name: nameController.text.trim(),
-                      birthDate: birthDateController.text.trim(),
-                      relativeContact: 'Авто-создание',
-                    ));
-                  }
-
-                  final user = User(
-                    login: loginController.text.trim(),
-                    password: passwordController.text.trim(),
-                    role: selectedRole,
-                    patientId: selectedRole == UserRole.patient ? profileId : null,
-                    doctorId: selectedRole == UserRole.doctor ? profileId : null,
-                  );
-
-                  await _dbService.registerUser(user);
-
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    _loadData();
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Ошибка создания: $e')),
-                    );
-                  }
-                }
-              },
-              child: const Text('Создать'),
-            ),
-          ],
+  Widget _dialogSectionTitle(BuildContext context, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12, top: 4, left: 4),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontWeight: FontWeight.w900,
+          fontSize: 11,
+          color: Theme.of(context).colorScheme.primary,
+          letterSpacing: 1.5,
         ),
       ),
     );
@@ -372,162 +379,103 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Панель администратора'),
+        title: const Text('Администрирование'),
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.people), text: 'Пользователи'),
-            Tab(icon: Icon(Icons.person), text: 'Пациенты'),
-            Tab(icon: Icon(Icons.medical_services), text: 'Врачи'),
-          ],
+          tabs: const [Tab(text: 'Аккаунты'), Tab(text: 'Пациенты'), Tab(text: 'Врачи')],
         ),
         actions: [
-          IconButton(onPressed: _loadData, icon: const Icon(Icons.refresh)),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
-              );
-            },
-            tooltip: 'Выйти',
-          ),
+          IconButton(onPressed: _loadData, icon: const Icon(Icons.refresh_rounded)),
+          IconButton(icon: const Icon(Icons.logout_rounded), onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()))),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : TabBarView(
-        controller: _tabController,
-        children: [
-          _buildUsersList(),
-          _buildPatientsList(),
-          _buildDoctorsList(),
-        ],
+              controller: _tabController,
+              children: [
+                _buildListView(_users, _buildUserTile),
+                _buildListView(_patients, _buildPatientTile),
+                _buildListView(_doctors, _buildDoctorTile),
+              ],
+            ),
+      floatingActionButton: _tabController.index == 0 
+          ? FloatingActionButton.extended(
+              onPressed: () => _showUserDialog(),
+              label: const Text('Добавить'),
+              icon: const Icon(Icons.person_add_rounded),
+            )
+          : null,
+    );
+  }
+
+  Widget _buildListView<T>(List<T> items, Widget Function(T) tileBuilder) {
+    if (items.isEmpty) return const Center(child: Text('Нет данных'));
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: items.length,
+      itemBuilder: (context, index) => tileBuilder(items[index]),
+    );
+  }
+
+  Widget _buildUserTile(User user) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: colorScheme.outlineVariant.withAlpha(128))),
+      child: ListTile(
+        leading: CircleAvatar(backgroundColor: colorScheme.surfaceVariant, child: Icon(Icons.account_circle_outlined, color: colorScheme.primary)),
+        title: Text(user.login, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text('Роль: ${user.role.displayName}'),
+        trailing: IconButton(icon: const Icon(Icons.edit_outlined), onPressed: () => _showUserDialog(user: user)),
       ),
     );
   }
 
-  Widget _buildUsersList() {
-    final roleDisplayNames = {
-      UserRole.admin: 'Администратор',
-      UserRole.doctor: 'Врач',
-      UserRole.patient: 'Пациент',
-    };
-
-    return Column(
-      children: [
-        Expanded(
-          child: ListView.builder(
-            itemCount: _users.length,
-            itemBuilder: (context, index) {
-              final user = _users[index];
-              return ListTile(
-                title: Text(user.login),
-                subtitle: Text('Роль: ${roleDisplayNames[user.role] ?? user.role.name}'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.blue),
-                      onPressed: () => _showEditUserDialog(user),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () async {
-                        if (user.login == 'admin') return;
-                        final confirmed = await _confirmDelete(
-                          'Удаление пользователя',
-                          'Вы уверены, что хотите удалить пользователя ${user.login}?',
-                        );
-                        if (confirmed) {
-                          await _dbService.deleteUser(user.id!);
-                          _loadData();
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+  Widget _buildPatientTile(Patient p) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: colorScheme.outlineVariant.withAlpha(128))),
+      child: ListTile(
+        leading: CircleAvatar(backgroundColor: colorScheme.primaryContainer, child: Icon(Icons.person_outline, color: colorScheme.onPrimaryContainer)),
+        title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(p.birthDate),
+        trailing: IconButton(
+          icon: const Icon(Icons.delete_outline, color: Colors.red),
+          onPressed: () async {
+            if (await _confirmDelete('Удаление', 'Удалить профиль ${p.name}?')) {
+              await _dbService.deletePatient(p.id!);
+              _loadData();
+            }
+          },
         ),
-        Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton(
-              onPressed: _showAddUserDialog,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                minimumSize: const Size(200, 48),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.person_add, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Добавить пользователя',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildPatientsList() {
-    return ListView.builder(
-      itemCount: _patients.length,
-      itemBuilder: (context, index) {
-        final patient = _patients[index];
-        return ListTile(
-          title: Text(patient.name),
-          subtitle: Text(patient.birthDate),
-          trailing: IconButton(
-            icon: const Icon(Icons.delete, color: Colors.red),
-            onPressed: () async {
-              final confirmed = await _confirmDelete(
-                'Удаление профиля',
-                'Вы уверены, что хотите удалить профиль пациента ${patient.name}? Все медицинские данные будут удалены.',
-              );
-              if (confirmed) {
-                await _dbService.deletePatient(patient.id!);
-                _loadData();
-              }
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildDoctorsList() {
-    return ListView.builder(
-      itemCount: _doctors.length,
-      itemBuilder: (context, index) {
-        final doctor = _doctors[index];
-        return ListTile(
-          title: Text(doctor.name),
-          subtitle: Text(doctor.specialization),
-          trailing: IconButton(
-            icon: const Icon(Icons.delete, color: Colors.red),
-            onPressed: () async {
-              final confirmed = await _confirmDelete(
-                'Удаление профиля',
-                'Вы уверены, что хотите удалить профиль врача ${doctor.name}?',
-              );
-              if (confirmed) {
-                await _dbService.deleteDoctor(doctor.id!);
-                _loadData();
-              }
-            },
-          ),
-        );
-      },
+  Widget _buildDoctorTile(Doctor d) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: colorScheme.outlineVariant.withAlpha(128))),
+      child: ListTile(
+        leading: CircleAvatar(backgroundColor: colorScheme.tertiaryContainer, child: Icon(Icons.medical_services_outlined, color: colorScheme.onTertiaryContainer)),
+        title: Text(d.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(d.specialization),
+        trailing: IconButton(
+          icon: const Icon(Icons.delete_outline, color: Colors.red),
+          onPressed: () async {
+            if (await _confirmDelete('Удаление', 'Удалить профиль врача ${d.name}?')) {
+              await _dbService.deleteDoctor(d.id!);
+              _loadData();
+            }
+          },
+        ),
+      ),
     );
   }
 }

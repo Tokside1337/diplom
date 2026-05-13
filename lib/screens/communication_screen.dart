@@ -36,17 +36,11 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Консилиум и Заметки',
-          style: TextStyle(
-            color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white,
-          ),
-        ),
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        title: const Text('Заметки консилиума'),
       ),
       body: Column(
         children: [
@@ -55,17 +49,16 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
               child: FutureBuilder<List<Map<String, dynamic>>>(
                 future: _dbService.getNotes(widget.patientId),
                 builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+                  if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
                   if (snapshot.data!.isEmpty) {
                     return Center(
-                      child: Text(
-                        'Заметок пока нет',
-                        style: TextStyle(
-                          color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-                          fontSize: 16,
-                        ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.notes_rounded, size: 64, color: colorScheme.outlineVariant),
+                          const SizedBox(height: 16),
+                          Text('Заметок пока нет', style: TextStyle(color: colorScheme.onSurfaceVariant)),
+                        ],
                       ),
                     );
                   }
@@ -73,10 +66,7 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
                     reverse: true,
                     padding: const EdgeInsets.all(16),
                     itemCount: snapshot.data!.length,
-                    itemBuilder: (context, index) {
-                      final note = snapshot.data![index];
-                      return _buildChatBubble(note);
-                    },
+                    itemBuilder: (context, index) => _buildChatBubble(snapshot.data![index]),
                   );
                 },
               ),
@@ -88,18 +78,14 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.lock_outline,
-                      size: 64,
-                      color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400,
-                    ),
+                    Icon(Icons.lock_person_rounded, size: 64, color: colorScheme.outlineVariant),
                     const SizedBox(height: 16),
-                    Text(
-                      'Раздел "Заметки консилиума"\nдоступен только медицинскому персоналу',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-                        fontSize: 16,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Text(
+                        'Раздел доступен только медицинскому персоналу',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 16),
                       ),
                     ),
                   ],
@@ -112,73 +98,42 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
   }
 
   Widget _buildChatBubble(Map<String, dynamic> note) {
+    final colorScheme = Theme.of(context).colorScheme;
     final String authorRaw = note['author'] ?? 'Врач';
     final List<String> authorParts = authorRaw.split('|');
     final String name = authorParts[0];
     final String specialty = authorParts.length > 1 ? authorParts[1] : '';
-
     final String timestampStr = note['timestamp'].toString();
-    final String time = timestampStr.length >= 16
-        ? timestampStr.substring(11, 16)
-        : timestampStr;
-
-    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final String time = timestampStr.length >= 16 ? timestampStr.substring(11, 16) : timestampStr;
 
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isDarkMode
-              ? Colors.blue.shade900.withOpacity(0.4)
-              : Colors.blue.shade50,
+          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(16),
             topRight: Radius.circular(16),
             bottomRight: Radius.circular(16),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
-              blurRadius: 2,
-              offset: const Offset(0, 1),
-            ),
-          ],
+          border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
         ),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              note['content'],
-              style: TextStyle(
-                fontSize: 15,
-                color: isDarkMode ? Colors.white : Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 6),
+            Text(note['content'], style: const TextStyle(fontSize: 15)),
+            const SizedBox(height: 8),
             Row(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: Text(
-                    specialty.isNotEmpty ? '$name ($specialty)' : name,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDarkMode ? Colors.blue.shade200 : Colors.blue.shade800,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
                 Text(
-                  time,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-                  ),
+                  specialty.isNotEmpty ? '$name ($specialty)' : name,
+                  style: TextStyle(fontSize: 11, color: colorScheme.primary, fontWeight: FontWeight.bold),
                 ),
+                Text(time, style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant)),
               ],
             ),
           ],
@@ -188,19 +143,12 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
   }
 
   Widget _buildInputArea() {
-    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.only(left: 16, right: 8, top: 8, bottom: 8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
-            offset: const Offset(0, -1),
-            blurRadius: 5,
-          ),
-        ],
+        color: colorScheme.surface,
+        border: Border(top: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5))),
       ),
       child: SafeArea(
         child: Row(
@@ -208,27 +156,19 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
             Expanded(
               child: TextField(
                 controller: _noteController,
-                style: TextStyle(
-                  color: isDarkMode ? Colors.white : Colors.black87,
-                  fontSize: 16,
-                ),
                 decoration: InputDecoration(
                   hintText: 'Введите заметку...',
-                  hintStyle: TextStyle(
-                    color: isDarkMode ? Colors.grey.shade500 : Colors.grey.shade400,
-                    fontSize: 16,
-                  ),
-                  border: InputBorder.none,
+                  filled: true,
+                  fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 ),
                 maxLines: null,
-                textCapitalization: TextCapitalization.sentences,
               ),
             ),
-            IconButton(
-              icon: Icon(
-                Icons.send,
-                color: Theme.of(context).primaryColor,
-              ),
+            const SizedBox(width: 8),
+            IconButton.filled(
+              icon: const Icon(Icons.send_rounded),
               onPressed: () async {
                 final content = _noteController.text.trim();
                 if (content.isNotEmpty) {
@@ -238,9 +178,7 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
                   }
                   await _dbService.insertNote(widget.patientId, authorInfo, content);
                   _noteController.clear();
-                  if (mounted) {
-                    setState(() {});
-                  }
+                  if (mounted) setState(() {});
                 }
               },
             ),

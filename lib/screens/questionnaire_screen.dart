@@ -21,44 +21,75 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Опросник PTSD-чеклист')),
+      appBar: AppBar(title: const Text('Опросник PTSD')),
       body: ListView.builder(
+        padding: const EdgeInsets.all(16),
         itemCount: _questions.length,
         itemBuilder: (context, index) {
-          return Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(_questions[index]['q'], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                Slider(
-                  value: _questions[index]['score'].toDouble(),
-                  min: 0, 
-                  max: 5, 
-                  divisions: 5,
-                  label: _questions[index]['score'].toString(),
-                  onChanged: (val) {
-                    setState(() => _questions[index]['score'] = val.toInt());
-                  },
-                ),
-              ],
+          return Card(
+            elevation: 0,
+            margin: const EdgeInsets.only(bottom: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _questions[index]['q'],
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Icon(Icons.sentiment_satisfied_rounded, size: 20, color: Colors.grey),
+                      Expanded(
+                        child: Slider(
+                          value: _questions[index]['score'].toDouble(),
+                          min: 0,
+                          max: 5,
+                          divisions: 5,
+                          label: _questions[index]['score'].toString(),
+                          onChanged: (val) {
+                            setState(() => _questions[index]['score'] = val.toInt());
+                          },
+                        ),
+                      ),
+                      const Icon(Icons.sentiment_very_dissatisfied_rounded, size: 20, color: Colors.redAccent),
+                    ],
+                  ),
+                  Center(
+                    child: Text(
+                      'Балл: ${_questions[index]['score']}',
+                      style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         },
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            minimumSize: const Size.fromHeight(50),
-            backgroundColor: Colors.blueAccent,
-            foregroundColor: Colors.white,
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          border: Border(top: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3))),
+        ),
+        child: FilledButton(
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(56),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
           onPressed: () async {
             int total = _questions.fold(0, (sum, item) => sum + (item['score'] as int));
             
-            // Сохраняем результат в БД
             await _dbService.insertQuestionnaireResult(QuestionnaireResult(
               patientId: widget.patientId,
               title: 'PTSD-чеклист',
@@ -66,30 +97,26 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
               date: DateTime.now().toUtc().add(const Duration(hours: 3)).toString(),
             ));
 
-            if (!context.mounted) {
-              return;
-            }
+            if (!context.mounted) return;
 
             showDialog(
               context: context,
               builder: (c) => AlertDialog(
                 title: const Text('Результат сохранен'),
-                content: Text('Общий балл: $total. ${total > 10 ? "Рекомендуется консультация психолога." : "Показатели в норме."}'),
+                content: Text('Общий балл: $total. ${total > 10 ? "Рекомендуется консультация специалиста." : "Показатели в норме."}'),
                 actions: [
                   TextButton(
                     onPressed: () {
                       Navigator.pop(c);
-                      if (mounted) {
-                        Navigator.pop(context);
-                      }
+                      Navigator.pop(context);
                     }, 
-                    child: const Text('OK')
+                    child: const Text('Понятно')
                   )
                 ],
               ),
             );
           },
-          child: const Text('Завершить и сохранить'),
+          child: const Text('Завершить опрос', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         ),
       ),
     );

@@ -58,15 +58,12 @@ class _PatientListScreenState extends State<PatientListScreen> {
     }
   }
 
-  // Метод _showAddPatientDialog удален, так как добавление пациентов 
-  // теперь осуществляется через панель администратора.
-
   Future<void> _deletePatient(int id) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Удаление'),
-        content: const Text('Вы уверены, что хотите удалить профиль пациента? Все связанные данные (анализы, дневник) будут удалены.'),
+        content: const Text('Вы уверены, что хотите удалить профиль пациента? Все связанные данные будут удалены.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Отмена')),
           TextButton(
@@ -85,48 +82,59 @@ class _PatientListScreenState extends State<PatientListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: widget.hideAppBar ? null : AppBar(
-        title: const Text('Цифровые профили пациентов'),
+        title: const Text('Профили пациентов'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout_rounded),
             onPressed: _logout,
-            tooltip: 'Выйти',
           ),
         ],
       ),
       body: _patients.isEmpty 
-        ? const Center(child: Text('Список пациентов пуст.'))
+        ? Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.people_outline_rounded, size: 64, color: colorScheme.outline),
+                const SizedBox(height: 16),
+                const Text('Список пациентов пуст.'),
+              ],
+            ),
+          )
         : ListView.builder(
+            padding: const EdgeInsets.all(16),
             itemCount: _patients.length,
             itemBuilder: (context, index) {
               final p = _patients[index];
-              return Dismissible(
-                key: Key(p.id.toString()),
-                direction: DismissDirection.endToStart,
-                background: Container(
-                  color: Colors.red,
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: const Icon(Icons.delete, color: Colors.white),
-                ),
-                confirmDismiss: (direction) async {
-                  await _deletePatient(p.id!);
-                  return false;
-                },
-                child: ListTile(
-                  leading: const CircleAvatar(child: Icon(Icons.person)),
-                  title: Text(p.name),
-                  subtitle: Text('Дата Рождения: ${_formatDate(p.birthDate)}'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => PatientDetailsScreen(
-                      patient: p, 
-                      isPatientView: false,
-                      doctor: widget.doctor,
-                    )),
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    leading: CircleAvatar(
+                      backgroundColor: colorScheme.primaryContainer,
+                      child: Icon(Icons.person_rounded, color: colorScheme.onPrimaryContainer),
+                    ),
+                    title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('Дата Рождения: ${_formatDate(p.birthDate)}'),
+                    trailing: Icon(Icons.chevron_right_rounded, color: colorScheme.primary),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => PatientDetailsScreen(
+                        patient: p, 
+                        isPatientView: false,
+                        doctor: widget.doctor,
+                      )),
+                    ),
                   ),
                 ),
               );

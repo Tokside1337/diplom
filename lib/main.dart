@@ -5,9 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:diplom/screens/login_screen.dart';
 import 'package:diplom/providers/settings_provider.dart';
 
-/// The main entry point for the application.
 void main() {
-  // Ensure that plugin services are initialized before running the app.
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
     ChangeNotifierProvider(
@@ -17,12 +15,6 @@ void main() {
   );
 }
 
-/// The root widget of the Rehabilitation System application.
-///
-/// This widget configures the global application settings including:
-/// * Theme (Material 3 with Roboto font)
-/// * Localization (Russian)
-/// * Initial screen ([LoginScreen])
 class RehabApp extends StatelessWidget {
   const RehabApp({super.key});
 
@@ -45,9 +37,27 @@ class RehabApp extends StatelessWidget {
         useMaterial3: true,
         colorSchemeSeed: Colors.blue,
         textTheme: GoogleFonts.robotoTextTheme(),
+        cardTheme: CardThemeData(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: const BorderSide(color: Colors.black12, width: 0.5),
+          ),
+        ),
         appBarTheme: const AppBarTheme(
           centerTitle: true,
-          elevation: 2,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          height: 70,
+          elevation: 0,
         ),
       ),
       darkTheme: ThemeData(
@@ -55,9 +65,22 @@ class RehabApp extends StatelessWidget {
         brightness: Brightness.dark,
         colorSchemeSeed: Colors.blue,
         textTheme: GoogleFonts.robotoTextTheme(ThemeData.dark().textTheme),
+        cardTheme: CardThemeData(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: const BorderSide(color: Colors.white10, width: 0.5),
+          ),
+        ),
         appBarTheme: const AppBarTheme(
           centerTitle: true,
-          elevation: 2,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
         ),
       ),
       localizationsDelegates: const [
@@ -65,9 +88,7 @@ class RehabApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('ru', 'RU'),
-      ],
+      supportedLocales: const [Locale('ru', 'RU')],
       locale: const Locale('ru', 'RU'),
       home: const LoginScreen(),
       debugShowCheckedModeBanner: false,
