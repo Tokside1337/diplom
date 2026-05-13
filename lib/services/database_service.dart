@@ -42,7 +42,7 @@ class DatabaseService {
       return conn;
     } catch (e) {
       // ignore: avoid_print
-      print('Ошибка подключения к PostgreSQL: \$e');
+      print('Ошибка подключения к PostgreSQL: $e');
       rethrow;
     }
   }
@@ -350,13 +350,8 @@ class DatabaseService {
 
   Future<List<Appointment>> getAppointments(int patientId) async {
     final conn = await connection;
-    // Удаляем прошедшие мероприятия перед получением списка
-    final now = DateTime.now().toUtc().add(const Duration(hours: 3)).toString();
-    await conn.execute(
-      Sql.named('DELETE FROM appointments WHERE patient_id = @pId AND time < @now'),
-      parameters: {'pId': patientId, 'now': now},
-    );
-
+    // Удаление прошедших мероприятий убрано по просьбе пользователя для корректного отображения
+    
     final result = await conn.execute(
       Sql.named('SELECT id, patient_id, type, title, time, room, doctor FROM appointments WHERE patient_id = @pId ORDER BY time ASC'),
       parameters: {'pId': patientId},

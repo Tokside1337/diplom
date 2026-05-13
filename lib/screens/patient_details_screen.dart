@@ -46,7 +46,24 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   List<MoodEntry> _moods = [];
   List<Appointment> _appointments = [];
   List<QuestionnaireResult> _qResults = [];
+  List<Doctor> _allDoctors = [];
   String _trend = 'Загрузка...';
+
+  // Список предустановленных процедур для автодополнения
+  final List<String> _procedureSuggestions = [
+    'Перевязка',
+    'КТ (Компьютерная томография)',
+    'МРТ',
+    'ЛФК (групповое)',
+    'ЛФК (индивидуальное)',
+    'Массаж',
+    'Электрофорез',
+    'Прием врача-терапевта',
+    'Прием кардиолога',
+    'Прием невролога',
+    'УЗИ',
+    'Анализ крови',
+  ];
 
   @override
   void initState() {
@@ -60,18 +77,44 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       final mood = await _dbService.getMoodEntries(widget.patient.id!);
       final appts = await _dbService.getAppointments(widget.patient.id!);
       final qres = await _dbService.getQuestionnaireResults(widget.patient.id!);
+      final docs = await _dbService.getDoctors();
+      
       if (mounted) {
         setState(() {
           _measurements = m;
           _moods = mood;
           _appointments = appts;
           _qResults = qres;
+          _allDoctors = docs;
           _trend = AIService.analyzeTrend(m);
         });
       }
     } catch (e) {
       debugPrint("Error loading data: $e");
     }
+  }
+
+  String _formatDoctorShort(String fullName) {
+    List<String> parts = fullName.split(' ');
+    if (parts.length >= 3) {
+      return "${parts[0]} ${parts[1][0]}.${parts[2][0]}.";
+    } else if (parts.length == 2) {
+      return "${parts[0]} ${parts[1][0]}.";
+    }
+    return fullName;
+  }
+
+  String _getProcedureType(String procedure) {
+    if (procedure.contains('КТ') || procedure.contains('МРТ') || procedure.contains('УЗИ') || procedure.contains('Анализ')) {
+      return 'Обследование';
+    } else if (procedure.contains('ЛФК')) {
+      return 'ЛФК';
+    } else if (procedure.contains('Прием')) {
+      return 'Прием';
+    } else if (procedure.contains('Массаж') || procedure.contains('Электрофорез') || procedure.contains('Перевязка')) {
+      return 'Процедура';
+    }
+    return 'Процедура';
   }
 
   Future<void> _addAppointment() async {
@@ -82,6 +125,9 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     DateTime selectedDate = DateTime.now();
     TimeOfDay selectedTime = TimeOfDay.now();
 
+    // Список имен врачей в формате Фамилия И.О.
+    final doctorNames = _allDoctors.map((d) => _formatDoctorShort(d.name)).toList();
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -91,10 +137,47 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Название')),
+                Autocomplete<String>(
+                  optionsBuilder: (TextEditingValue textEditingValue) {
+                    if (textEditingValue.text.isEmpty) return const Iterable<String>.empty();
+                    return _procedureSuggestions.where((String option) {
+                      return option.toLowerCase().startsWith(textEditingValue.text.toLowerCase());
+                    });
+                  },
+                  onSelected: (String selection) {
+                    titleController.text = selection;
+                    setDialogState(() {
+                      typeController.text = _getProcedureType(selection);
+                    });
+                  },
+                  fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                    return TextField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      decoration: const InputDecoration(labelText: 'Название'),
+                      onChanged: (val) => titleController.text = val,
+                    );
+                  },
+                ),
                 TextField(controller: typeController, decoration: const InputDecoration(labelText: 'Тип (ЛФК, Прием и т.д.)')),
                 TextField(controller: roomController, decoration: const InputDecoration(labelText: 'Кабинет')),
-                TextField(controller: doctorController, decoration: const InputDecoration(labelText: 'Врач')),
+                Autocomplete<String>(
+                  optionsBuilder: (TextEditingValue textEditingValue) {
+                    if (textEditingValue.text.isEmpty) return const Iterable<String>.empty();
+                    return doctorNames.where((String option) {
+                      return option.toLowerCase().startsWith(textEditingValue.text.toLowerCase());
+                    });
+                  },
+                  onSelected: (String selection) => doctorController.text = selection,
+                  fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                    return TextField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      decoration: const InputDecoration(labelText: 'Врач (Фамилия И.О.)'),
+                      onChanged: (val) => doctorController.text = val,
+                    );
+                  },
+                ),
                 const SizedBox(height: 10),
                 ListTile(
                   title: Text("Дата: ${selectedDate.toString().split(' ')[0]}"),
@@ -311,7 +394,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               const SizedBox(height: 10),
               _buildMeasurementsDetails(),
               const SizedBox(height: 24),
-              _buildSectionTitle('Мой календарь мероприятий'),
+              _buildSectionTitle('План мероприятий'),
               _buildAppointmentsList(),
               const SizedBox(height: 24),
               _buildSectionTitle('Рекомендации врача'),
@@ -725,7 +808,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               child: Icon(_getAppTypeIcon(app.type), color: Colors.white, size: 20),
             ),
             title: Text(app.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('${app.type} • Каб. ${app.room}'),
+            subtitle: Text('${app.type} • Каб. ${app.room} • ${app.doctor}'),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
