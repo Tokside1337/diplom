@@ -5,6 +5,7 @@ import 'package:diplom/screens/patient_list_screen.dart';
 import 'package:diplom/screens/login_screen.dart';
 import 'package:diplom/providers/settings_provider.dart';
 import 'package:diplom/services/ai_service.dart';
+import 'package:diplom/services/database_service.dart';
 
 class DoctorMainScreen extends StatefulWidget {
   final Doctor doctor;
@@ -23,7 +24,7 @@ class _DoctorMainScreenState extends State<DoctorMainScreen> {
     super.initState();
     _pages = [
       PatientListScreen(hideAppBar: true, doctor: widget.doctor),
-      _DoctorScheduleTab(),
+      _DoctorScheduleTab(doctor: widget.doctor),
       _DoctorAIChatTab(),
       _DoctorProfileTab(doctor: widget.doctor),
       _DoctorSettingsTab(),
@@ -56,21 +57,171 @@ class _DoctorMainScreenState extends State<DoctorMainScreen> {
   }
 }
 
-class _DoctorScheduleTab extends StatelessWidget {
+class _DoctorScheduleTab extends StatefulWidget {
+  final Doctor doctor;
+  const _DoctorScheduleTab({required this.doctor});
+
+  @override
+  State<_DoctorScheduleTab> createState() => _DoctorScheduleTabState();
+}
+
+class _DoctorScheduleTabState extends State<_DoctorScheduleTab> {
+  final DatabaseService _dbService = DatabaseService();
+  List<Map<String, dynamic>> _schedule = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSchedule();
+  }
+
+  String _formatNameShort(String fullName) {
+    if (fullName.isEmpty) return "";
+    if (fullName.contains('.')) return fullName;
+    List<String> parts = fullName.trim().split(RegExp(r'\s+'));
+    if (parts.length >= 3) {
+      return "${parts[0]} ${parts[1][0]}.${parts[2][0]}.";
+    } else if (parts.length == 2) {
+      return "${parts[0]} ${parts[1][0]}.";
+    }
+    return fullName;
+  }
+
+  Future<void> _loadSchedule() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+    try {
+      // Ищем мероприятия по краткому имени врача (как они сохраняются в базе)
+      final formattedDoctorName = _formatNameShort(widget.doctor.name);
+      final schedule = await _dbService.getDoctorSchedule(formattedDoctorName);
+      if (mounted) {
+        setState(() {
+          _schedule = schedule;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка загрузки графика: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('График приемов')),
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.event_note, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text('Здесь будет отображаться ваш общий график приемов'),
-          ],
-        ),
+      appBar: AppBar(
+        title: const Text('График приемов'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadSchedule,
+          ),
+        ],
       ),
+      body: _isLoading 
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _loadSchedule,
+              child: _schedule.isEmpty
+                  ? ListView(
+                      children: const [
+                        SizedBox(height: 200),
+                        Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.event_note, size: 64, color: Colors.grey),
+                              SizedBox(height: 16),
+                              Text('Назначенных мероприятий пока нет'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _schedule.length,
+                      itemBuilder: (context, index) {
+                        final item = _schedule[index];
+                        final dateTime = DateTime.parse(item['time'] as String);
+                        final formattedDate = "${dateTime.day.toString().padLeft(2, '0')}.${dateTime.month.toString().padLeft(2, '0')}.${dateTime.year}";
+                        final formattedTime = "${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}";
+                        
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          elevation: 2,
+                          color: isDark ? Colors.grey[900] : Colors.white,
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: isDark ? Colors.blue.withOpacity(0.2) : Colors.blue.shade100,
+                              child: Icon(Icons.event, color: isDark ? Colors.blue[300] : Colors.blue.shade800),
+                            ),
+                            title: Text(
+                              item['title'] as String, 
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold, 
+                                fontSize: 16,
+                                color: isDark ? Colors.white : Colors.black87,
+                              )
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Пациент: ${_formatNameShort(item['patient_name'] as String)}',
+                                  style: TextStyle(
+                                    color: isDark ? Colors.grey[300] : Colors.black87, 
+                                    fontWeight: FontWeight.w500
+                                  ),
+                                ),
+                                Text(
+                                  'Кабинет: ${item['room']} • ${item['type']}',
+                                  style: TextStyle(color: isDark ? Colors.grey[400] : Colors.black54),
+                                ),
+                              ],
+                            ),
+                            trailing: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  formattedDate, 
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold, 
+                                    fontSize: 13,
+                                    color: isDark ? Colors.grey[300] : Colors.black87,
+                                  )
+                                ),
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? Colors.blue.withOpacity(0.2) : Colors.blue.shade50,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    formattedTime, 
+                                    style: TextStyle(
+                                      color: isDark ? Colors.blue[300] : Colors.blue, 
+                                      fontWeight: FontWeight.bold
+                                    )
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
     );
   }
 }

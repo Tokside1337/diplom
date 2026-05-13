@@ -367,6 +367,28 @@ class DatabaseService {
     )).toList();
   }
 
+  Future<List<Map<String, dynamic>>> getDoctorSchedule(String doctorName) async {
+    final conn = await connection;
+    final result = await conn.execute(
+      Sql.named('''
+        SELECT a.id, a.type, a.title, a.time, a.room, p.name as patient_name 
+        FROM appointments a 
+        JOIN patients p ON a.patient_id = p.id 
+        WHERE TRIM(a.doctor) ILIKE TRIM(@doctorName) 
+        ORDER BY a.time ASC
+      '''),
+      parameters: {'doctorName': doctorName},
+    );
+    return result.map((row) => {
+      'id': row[0],
+      'type': row[1],
+      'title': row[2],
+      'time': row[3],
+      'room': row[4],
+      'patient_name': row[5],
+    }).toList();
+  }
+
   Future<void> deleteAppointment(int id) async {
     final conn = await connection;
     await conn.execute(

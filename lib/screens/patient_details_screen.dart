@@ -96,7 +96,8 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   }
 
   String _formatDoctorShort(String fullName) {
-    List<String> parts = fullName.split(' ');
+    if (fullName.contains('.')) return fullName;
+    List<String> parts = fullName.trim().split(RegExp(r'\s+'));
     if (parts.length >= 3) {
       return "${parts[0]} ${parts[1][0]}.${parts[2][0]}.";
     } else if (parts.length == 2) {
@@ -406,7 +407,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               const SizedBox(height: 24),
               _buildSectionTitle('История настроения', bottomMargin: 2),
               _buildMoodList(),
-              const SizedBox(height: 80),
+              const SizedBox(height: 80), // Увеличенный отступ, чтобы кнопки не заслоняли текст
             ],
           ),
         ),
@@ -516,7 +517,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               const SizedBox(height: 24),
               _buildSectionTitle('Психологический профиль', bottomMargin: 2),
               _buildMoodList(),
-              const SizedBox(height: 80),
+              const SizedBox(height: 80), // Увеличенный отступ для врача тоже
             ],
           ),
         ),
