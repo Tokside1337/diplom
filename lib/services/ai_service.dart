@@ -2,14 +2,11 @@ import 'package:diplom/models/medical_models.dart';
 import 'package:diplom/models/patient.dart';
 
 class AIService {
-  /// Расширенный анализ тональности текста для русского языка (Rule-based)
-  /// Добавлена детекция критических состояний и анализ семейных отношений
-  static String analyzeSentiment(String text) {
-    if (text.isEmpty) return 'Neutral';
-
+  /// Вспомогательный метод для расчета числового веса текста
+  static double _calculateRawScore(String text) {
+    if (text.isEmpty) return 0.0;
     final normalizedText = text.toLowerCase();
 
-    // Списки слов с весами
     final Map<String, double> positiveScores = {
       'хорошо': 1.0, 'отлично': 2.0, 'лучше': 1.5, 'спокойно': 1.0,
       'рад': 1.5, 'счастлив': 2.0, 'прогресс': 2.0, 'бодрость': 1.5,
@@ -60,7 +57,6 @@ class AIService {
     };
 
     double totalScore = 0;
-    bool hasCriticalMarker = false;
     final words = normalizedText.split(RegExp(r'[\s,.;!?]+'));
 
     for (int i = 0; i < words.length; i++) {
@@ -86,14 +82,42 @@ class AIService {
       } else if (criticalScores.containsKey(word)) {
         double score = criticalScores[word]! * multiplier;
         totalScore += isNegated ? score * 0.5 : score;
-        if (!isNegated) hasCriticalMarker = true;
       }
     }
+    return totalScore;
+  }
 
-    if (hasCriticalMarker || totalScore < -5.0) return 'CRITICAL';
+  /// Расширенный анализ тональности текста для русского языка
+  static String analyzeSentiment(String text) {
+    if (text.isEmpty) return 'Neutral';
+    
+    // Проверка на критические маркеры отдельно для точного срабатывания
+    final normalized = text.toLowerCase();
+    final criticalKeywords = ['суицид', 'убить', 'убью', 'смерть', 'умру', 'покончить', 'вскрыть', 'повешусь', 'удавиться', 'вены'];
+    if (criticalKeywords.any((k) => normalized.contains(k))) return 'CRITICAL';
+
+    double totalScore = _calculateRawScore(text);
+
+    if (totalScore < -5.0) return 'CRITICAL';
     if (totalScore > 0.5) return 'Positive';
     if (totalScore < -0.5) return 'Negative';
     return 'Neutral';
+  }
+
+  /// Расчет оценки настроения (1-5) на основе анализа текста
+  static int calculateMoodScore(String text) {
+    if (text.isEmpty) return 3; // По умолчанию нейтрально
+
+    final sentiment = analyzeSentiment(text);
+    if (sentiment == 'CRITICAL') return 1;
+    
+    double raw = _calculateRawScore(text);
+    
+    if (raw >= 2.0) return 5;
+    if (raw > 0.5) return 4;
+    if (raw >= -0.5) return 3;
+    if (raw > -2.0) return 2;
+    return 1;
   }
 
   /// Проверка критического давления
@@ -104,22 +128,18 @@ class AIService {
     final systolic = lastMeasurement.pressureSystolic;
     final diastolic = lastMeasurement.pressureDiastolic;
 
-    // Критически высокое давление (гипертонический криз)
     if (systolic >= 180 || diastolic >= 120) {
       return '🔴 КРИТИЧЕСКИ ОПАСНО: Очень высокое давление (${systolic.toInt()}/${diastolic.toInt()})! НЕМЕДЛЕННО вызовите скорую помощь (103) или обратитесь в приемный покой!';
     }
 
-    // Опасное высокое давление
     if (systolic >= 160 || diastolic >= 100) {
       return '⚠️ ОПАСНО: Давление критически высокое (${systolic.toInt()}/${diastolic.toInt()}). Требуется срочная консультация врача. Примите прописанные лекарства, обеспечьте покой.';
     }
 
-    // Критически низкое давление
     if (systolic < 70 || diastolic < 40) {
       return '🔴 КРИТИЧЕСКИ ОПАСНО: Экстремально низкое давление (${systolic.toInt()}/${diastolic.toInt()})! НЕМЕДЛЕННО вызовите скорую помощь (103)! Обморок может наступить в любой момент.';
     }
 
-    // Опасное низкое давление
     if (systolic < 90 || diastolic < 60) {
       return '⚠️ ОПАСНО: Низкое давление (${systolic.toInt()}/${diastolic.toInt()}). Возможны головокружение и слабость. Пейте больше воды, избегайте резких движений.';
     }
@@ -127,19 +147,17 @@ class AIService {
     return null;
   }
 
-  /// Система рекомендаций (расширенная)
+  /// Система рекомендаций
   static List<String> getRecommendations(Patient patient, List<Diagnosis> diagnoses, List<Measurement> measurements) {
     List<String> recommendations = [];
     bool hasPtsd = diagnoses.any((d) => d.description.toLowerCase().contains('птср'));
 
-    // Проверка на критическое давление
     final criticalPressure = checkCriticalPressureFromMeasurements(measurements);
     if (criticalPressure != null) {
       recommendations.add('🚨 СРОЧНО: $criticalPressure');
-      return recommendations; // Критические рекомендации имеют приоритет
+      return recommendations;
     }
 
-    // Рекомендации на основе диагнозов
     if (hasPtsd) {
       recommendations.add('🧠 Групповая арт-терапия');
       recommendations.add('📊 Сеанс биологической обратной связи (БОС)');
@@ -150,7 +168,6 @@ class AIService {
       recommendations.add('🏊 Плавание');
     }
 
-    // Рекомендации на основе измерений давления
     if (measurements.isNotEmpty) {
       final last = measurements.last;
       if (last.pressureSystolic > 140 || last.pressureDiastolic > 90) {
@@ -159,7 +176,6 @@ class AIService {
         recommendations.add('💧 Пониженное давление: пейте больше воды, можно кофеин (если нет противопоказаний)');
       }
 
-      // Рекомендации по пульсу
       if (last.pulse > 100) {
         recommendations.add('❤️ Учащенный пульс: практикуйте дыхательные упражнения');
       } else if (last.pulse < 60 && last.pulse > 0) {
@@ -170,7 +186,7 @@ class AIService {
     return recommendations;
   }
 
-  /// Анализ тренда физических показателей (улучшенный)
+  /// Анализ тренда физических показателей
   static String analyzeTrend(List<Measurement> measurements) {
     if (measurements.isEmpty) return 'Недостаточно данных для анализа';
     if (measurements.length < 3) return 'Данные собираются...';
@@ -178,7 +194,6 @@ class AIService {
     final last = measurements.last;
     final first = measurements.first;
 
-    // Проверка критического давления
     final criticalPressure = checkCriticalPressureFromMeasurements(measurements);
     if (criticalPressure != null) {
       return criticalPressure;
@@ -198,7 +213,7 @@ class AIService {
     return 'Следим за динамикой...';
   }
 
-  /// Анализ на основе всех данных (расширенный прогноз)
+  /// Анализ на основе всех данных
   static String analyzeFullHealthStatus(List<Measurement> measurements, List<MoodEntry> moods) {
     if (measurements.isEmpty && moods.isEmpty) {
       return 'Недостаточно данных для оценки состояния. Добавьте замеры давления и записи в дневник.';
@@ -209,7 +224,6 @@ class AIService {
       return pressureAnalysis;
     }
 
-    // Анализ настроения
     if (moods.isNotEmpty) {
       final recentMoods = moods.reversed.take(5).toList();
       final avgMood = recentMoods.map((m) => m.score).reduce((a, b) => a + b) / recentMoods.length;
@@ -229,7 +243,6 @@ class AIService {
     final normalizedMessage = message.toLowerCase().trim();
 
     if (isDoctor) {
-      // Логика для врача
       if (normalizedMessage.contains('привет') || normalizedMessage.contains('здравствуй')) {
         return 'Здравствуйте, коллега! Я ваш интеллектуальный помощник. Могу помочь проанализировать данные пациентов или ответить на медицинские вопросы.';
       }
@@ -253,14 +266,12 @@ class AIService {
       return 'Я готов помочь в анализе клинических случаев. Вы можете спросить о нормах показателей, протоколах реабилитации или интерпретации данных.';
     }
 
-    // Приветствия
     if (normalizedMessage.contains('привет') || normalizedMessage.contains('здравствуй') ||
         normalizedMessage.contains('добрый день') || normalizedMessage.contains('доброе утро') ||
         normalizedMessage == 'здравствуйте') {
       return 'Здравствуйте! Я ваш ИИ-консультант. Как вы себя чувствуете сегодня?';
     }
 
-    // Давление
     if (normalizedMessage.contains('давление') || normalizedMessage.contains('тонометр')) {
       return '📊 Давление - важный показатель сердечно-сосудистой системы.\n\n'
           'Нормальные значения: 120/80 мм рт.ст.\n\n'
@@ -272,7 +283,6 @@ class AIService {
           'в спокойном состоянии, после 5-минутного отдыха.';
     }
 
-    // Пульс
     if (normalizedMessage.contains('пульс') || normalizedMessage.contains('сердцебиение')) {
       return '❤️ Нормальный пульс в покое: 60-90 ударов в минуту.\n\n'
           '• Брадикардия (редкий пульс): <60 уд/мин\n'
@@ -281,7 +291,6 @@ class AIService {
           'Если отклонения сохраняются, проконсультируйтесь с кардиологом.';
     }
 
-    // Сон
     if (normalizedMessage.contains('сон') || normalizedMessage.contains('бессонница') ||
         normalizedMessage.contains('сплю') || normalizedMessage.contains('не сплю')) {
       return '😴 Здоровый сон критически важен для нормализации давления.\n\n'
@@ -294,7 +303,6 @@ class AIService {
           'При хронической бессоннице обратитесь к врачу.';
     }
 
-    // Стресс
     if (normalizedMessage.contains('стресс') || normalizedMessage.contains('тревога') ||
         normalizedMessage.contains('нервы') || normalizedMessage.contains('волнуюсь') ||
         normalizedMessage.contains('беспокоюсь')) {
@@ -307,7 +315,6 @@ class AIService {
           'Если тревога не проходит, обратитесь к психологу.';
     }
 
-    // Лечение/лекарства
     if (normalizedMessage.contains('лечение') || normalizedMessage.contains('таблетки') ||
         normalizedMessage.contains('лекарство') || normalizedMessage.contains('препарат') ||
         normalizedMessage.contains('лечусь')) {
@@ -319,7 +326,6 @@ class AIService {
           'Если что-то беспокоит - обсудите с лечащим врачом!';
     }
 
-    // Питание
     if (normalizedMessage.contains('питание') || normalizedMessage.contains('есть') ||
         normalizedMessage.contains('диета') || normalizedMessage.contains('соль') ||
         normalizedMessage.contains('кушать') || normalizedMessage.contains('ем')) {
@@ -337,7 +343,6 @@ class AIService {
           '• Алкоголя';
     }
 
-    // Активность/спорт
     if (normalizedMessage.contains('активность') || normalizedMessage.contains('спорт') ||
         normalizedMessage.contains('лфк') || normalizedMessage.contains('ходьба') ||
         normalizedMessage.contains('зарядка') || normalizedMessage.contains('упражнения')) {
@@ -353,12 +358,10 @@ class AIService {
           '• При гипертонии избегайте тяжелых нагрузок';
     }
 
-    // Спасибо
     if (normalizedMessage.contains('спасибо')) {
       return 'Пожалуйста! Рад был помочь. Если у вас появятся другие вопросы, обращайтесь. Всего доброго и крепкого здоровья! 💙';
     }
 
-    // Как дела/как настроение
     if (normalizedMessage.contains('как дела') || normalizedMessage.contains('как настроение') ||
         normalizedMessage.contains('как жизнь') || normalizedMessage.contains('как ты')) {
       return 'У меня всё отлично! 😊\n\n'
@@ -367,13 +370,11 @@ class AIService {
           'Если что-то беспокоит - я здесь, чтобы помочь!';
     }
 
-    // Пока/до свидания
     if (normalizedMessage.contains('пока') || normalizedMessage.contains('до свидания') ||
         normalizedMessage.contains('до встречи')) {
       return 'До свидания! Берегите себя и следите за давлением. Если понадобится помощь - я всегда здесь. Всего доброго! 👋';
     }
 
-    // Стандартный ответ, если не найдено ключевых слов
     return 'Я ваш ИИ-консультант по здоровью. Могу помочь с вопросами:\n\n'
         '• Давление и его нормы 📊\n'
         '• Пульс и сердечный ритм ❤️\n'

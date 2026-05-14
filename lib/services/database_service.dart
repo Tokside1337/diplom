@@ -11,8 +11,6 @@ class DatabaseService {
 
   Connection? _connection;
 
-  // Настройки подключения к PostgreSQL
-  // ВНИМАНИЕ: Для Android эмулятора используйте '10.0.2.2' вместо 'localhost'
   final String _host = '10.0.2.2';
   final int _port = 5432;
   final String _databaseName = 'rehab_db';
@@ -41,14 +39,12 @@ class DatabaseService {
       await _ensureTablesExist(conn);
       return conn;
     } catch (e) {
-      // ignore: avoid_print
       print('Ошибка подключения к PostgreSQL: $e');
       rethrow;
     }
   }
 
   Future<void> _ensureTablesExist(Connection conn) async {
-    // 1. Модуль пациентов
     await conn.execute('''
       CREATE TABLE IF NOT EXISTS patients(
         id SERIAL PRIMARY KEY,
@@ -99,7 +95,6 @@ class DatabaseService {
       )
     ''');
 
-    // 2. Модуль медицинской реабилитации
     await conn.execute('''
       CREATE TABLE IF NOT EXISTS appointments(
         id SERIAL PRIMARY KEY,
@@ -113,12 +108,9 @@ class DatabaseService {
       )
     ''');
 
-    // Migration for existing table
     try {
       await conn.execute("ALTER TABLE appointments ADD COLUMN status TEXT DEFAULT 'pending'");
-    } catch (e) {
-      // Column might already exist
-    }
+    } catch (e) {}
 
     await conn.execute('''
       CREATE TABLE IF NOT EXISTS measurements(
@@ -132,7 +124,6 @@ class DatabaseService {
       )
     ''');
 
-    // 3. Модуль психологической реабилитации
     await conn.execute('''
       CREATE TABLE IF NOT EXISTS mood_entries(
         id SERIAL PRIMARY KEY,
@@ -144,7 +135,6 @@ class DatabaseService {
       )
     ''');
 
-    // 5. Модуль коммуникации
     await conn.execute('''
       CREATE TABLE IF NOT EXISTS medical_notes(
         id SERIAL PRIMARY KEY,
@@ -155,7 +145,6 @@ class DatabaseService {
       )
     ''');
 
-    // 6. Пользователи
     await conn.execute('''
       CREATE TABLE IF NOT EXISTS users(
         id SERIAL PRIMARY KEY,
@@ -167,7 +156,6 @@ class DatabaseService {
       )
     ''');
 
-    // Проверка наличия администратора по умолчанию
     final adminCheck = await conn.execute(
       Sql.named('SELECT id FROM users WHERE login = @login'),
       parameters: {'login': 'admin'},
@@ -178,14 +166,13 @@ class DatabaseService {
         Sql.named('INSERT INTO users (login, password, role) VALUES (@login, @password, @role)'),
         parameters: {
           'login': 'admin',
-          'password': '1234', // В реальном приложении пароль должен быть захеширован
+          'password': '1234',
           'role': 'admin',
         },
       );
     }
   }
 
-  // Doctor CRUD
   Future<int> insertDoctor(Doctor doctor) async {
     final conn = await connection;
     final result = await conn.execute(
@@ -203,7 +190,6 @@ class DatabaseService {
   Future<List<Doctor>> getDoctors() async {
     final conn = await connection;
     final result = await conn.execute('SELECT id, name, specialization, phone, cabinet FROM doctors ORDER BY id');
-    
     return result.map((row) => Doctor(
       id: row[0] as int,
       name: row[1] as String,
@@ -213,7 +199,6 @@ class DatabaseService {
     )).toList();
   }
 
-  // Patient CRUD
   Future<int> insertPatient(Patient patient) async {
     final conn = await connection;
     final result = await conn.execute(
@@ -231,7 +216,6 @@ class DatabaseService {
   Future<List<Patient>> getPatients() async {
     final conn = await connection;
     final result = await conn.execute('SELECT id, name, birth_date, photo_path, relative_contact FROM patients ORDER BY id');
-    
     return result.map((row) => Patient(
       id: row[0] as int,
       name: row[1] as String,
@@ -243,13 +227,9 @@ class DatabaseService {
 
   Future<void> deletePatient(int id) async {
     final conn = await connection;
-    await conn.execute(
-      Sql.named('DELETE FROM patients WHERE id = @id'),
-      parameters: {'id': id},
-    );
+    await conn.execute(Sql.named('DELETE FROM patients WHERE id = @id'), parameters: {'id': id});
   }
 
-  // Measurements
   Future<void> insertMeasurement(Measurement m) async {
     final conn = await connection;
     await conn.execute(
@@ -282,7 +262,6 @@ class DatabaseService {
     )).toList();
   }
 
-  // Mood
   Future<void> insertMoodEntry(MoodEntry entry) async {
     final conn = await connection;
     await conn.execute(
@@ -313,7 +292,11 @@ class DatabaseService {
     )).toList();
   }
 
-  // Notes
+  Future<void> deleteMoodEntry(int id) async {
+    final conn = await connection;
+    await conn.execute(Sql.named('DELETE FROM mood_entries WHERE id = @id'), parameters: {'id': id});
+  }
+
   Future<void> insertNote(int patientId, String author, String content) async {
     final conn = await connection;
     await conn.execute(
@@ -340,7 +323,6 @@ class DatabaseService {
     }).toList();
   }
 
-  // Appointments
   Future<void> insertAppointment(Appointment app) async {
     final conn = await connection;
     await conn.execute(
@@ -377,13 +359,7 @@ class DatabaseService {
 
   Future<void> updateAppointmentStatus(int id, String status) async {
     final conn = await connection;
-    await conn.execute(
-      Sql.named('UPDATE appointments SET status = @status WHERE id = @id'),
-      parameters: {
-        'status': status,
-        'id': id,
-      },
-    );
+    await conn.execute(Sql.named('UPDATE appointments SET status = @status WHERE id = @id'), parameters: {'status': status, 'id': id});
   }
 
   Future<List<Map<String, dynamic>>> getDoctorSchedule(String doctorName) async {
@@ -411,13 +387,9 @@ class DatabaseService {
 
   Future<void> deleteAppointment(int id) async {
     final conn = await connection;
-    await conn.execute(
-      Sql.named('DELETE FROM appointments WHERE id = @id'),
-      parameters: {'id': id},
-    );
+    await conn.execute(Sql.named('DELETE FROM appointments WHERE id = @id'), parameters: {'id': id});
   }
 
-  // Questionnaire Results
   Future<void> insertQuestionnaireResult(QuestionnaireResult res) async {
     final conn = await connection;
     await conn.execute(
@@ -446,7 +418,11 @@ class DatabaseService {
     )).toList();
   }
 
-  // Hospitalizations
+  Future<void> deleteQuestionnaireResult(int id) async {
+    final conn = await connection;
+    await conn.execute(Sql.named('DELETE FROM questionnaire_results WHERE id = @id'), parameters: {'id': id});
+  }
+
   Future<void> insertHospitalization(int patientId, String admission, String discharge, String reason, String dept) async {
     final conn = await connection;
     await conn.execute(
@@ -475,7 +451,6 @@ class DatabaseService {
     }).toList();
   }
 
-  // Users
   Future<void> registerUser(User user) async {
     final conn = await connection;
     await conn.execute(
@@ -499,7 +474,6 @@ class DatabaseService {
         'password': password,
       },
     );
-
     if (result.isEmpty) return null;
     final row = result.first;
     return User(
@@ -542,10 +516,7 @@ class DatabaseService {
 
   Future<void> deleteUser(int id) async {
     final conn = await connection;
-    await conn.execute(
-      Sql.named('DELETE FROM users WHERE id = @id'),
-      parameters: {'id': id},
-    );
+    await conn.execute(Sql.named('DELETE FROM users WHERE id = @id'), parameters: {'id': id});
   }
 
   Future<void> updateDoctor(Doctor doctor) async {
@@ -564,10 +535,7 @@ class DatabaseService {
 
   Future<void> deleteDoctor(int id) async {
     final conn = await connection;
-    await conn.execute(
-      Sql.named('DELETE FROM doctors WHERE id = @id'),
-      parameters: {'id': id},
-    );
+    await conn.execute(Sql.named('DELETE FROM doctors WHERE id = @id'), parameters: {'id': id});
   }
 
   Future<void> updatePatient(Patient patient) async {
@@ -586,35 +554,17 @@ class DatabaseService {
 
   Future<Doctor?> getDoctorById(int id) async {
     final conn = await connection;
-    final result = await conn.execute(
-      Sql.named('SELECT id, name, specialization, phone, cabinet FROM doctors WHERE id = @id'),
-      parameters: {'id': id},
-    );
+    final result = await conn.execute(Sql.named('SELECT id, name, specialization, phone, cabinet FROM doctors WHERE id = @id'), parameters: {'id': id});
     if (result.isEmpty) return null;
     final row = result.first;
-    return Doctor(
-      id: row[0] as int,
-      name: row[1] as String,
-      specialization: row[2] as String,
-      phone: row[3] as String?,
-      cabinet: row[4] as String?,
-    );
+    return Doctor(id: row[0] as int, name: row[1] as String, specialization: row[2] as String, phone: row[3] as String?, cabinet: row[4] as String?);
   }
 
   Future<Patient?> getPatientById(int id) async {
     final conn = await connection;
-    final result = await conn.execute(
-      Sql.named('SELECT id, name, birth_date, photo_path, relative_contact FROM patients WHERE id = @id'),
-      parameters: {'id': id},
-    );
+    final result = await conn.execute(Sql.named('SELECT id, name, birth_date, photo_path, relative_contact FROM patients WHERE id = @id'), parameters: {'id': id});
     if (result.isEmpty) return null;
     final row = result.first;
-    return Patient(
-      id: row[0] as int,
-      name: row[1] as String,
-      birthDate: row[2] as String,
-      photoPath: row[3] as String?,
-      relativeContact: row[4] as String,
-    );
+    return Patient(id: row[0] as int, name: row[1] as String, birthDate: row[2] as String, photoPath: row[3] as String?, relativeContact: row[4] as String);
   }
 }

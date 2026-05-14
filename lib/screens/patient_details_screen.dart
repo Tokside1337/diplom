@@ -44,6 +44,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   List<QuestionnaireResult> _qResults = [];
   List<Doctor> _allDoctors = [];
   String _trend = 'Загрузка...';
+  bool _isMoodExpanded = false;
 
   static const List<String> _procedureOptions = [
     'ЭКГ (Электрокардиография)',
@@ -61,13 +62,46 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     'Прием кардиолога',
     'Прием терапевта',
     'Прием невролога',
+    'Прием офтальмолога',
+    'Прием хирурга',
+    'Прием ЛОРа',
+    'Прием эндокринолога',
+    'Прием психотерапевта',
+    'Прием врача ЛФК',
+    'Прием физиотерапевта',
+    'Прием реабилитолога',
+    'Прием логопеда',
+    'Прием травматолога',
+    'Прием гастроэнтеролога',
+    'Прием дерматолога',
     'Холтеровское мониторирование',
     'СМАД (измерение давления)',
+    'ЭЭГ (Электроэнцефалография)',
+    'Спирометрия',
+    'Велоэргометрия (ВЭМ)',
     'Перевязка',
     'Инъекция внутримышечная',
     'Капельница',
-    'Массаж',
-    'Физиотерапия',
+    'ЛФК (индивидуальное занятие)',
+    'ЛФК (групповое занятие)',
+    'ЛФК в бассейне',
+    'Скандинавская ходьба',
+    'Механотерапия',
+    'Занятие на тренажерах',
+    'Занятие на стабилоплатформе',
+    'Дыхательная гимнастика',
+    'Массаж спины',
+    'Массаж воротниковой зоны',
+    'Общий массаж',
+    'Лимфодренажный массаж',
+    'Электрофорез',
+    'Магнитотерапия',
+    'Лазеротерапия',
+    'УВЧ-терапия',
+    'Иглорефлексотерапия',
+    'Парафинотерапия',
+    'Грязелечение',
+    'Занятие с эрготерапевтом',
   ];
 
   @override
@@ -114,12 +148,17 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   String _getAppointmentType(String title) {
     final t = title.toLowerCase();
     if (t.contains('анализ') || t.contains('кров') || t.contains('моч')) return 'Анализ';
-    if (t.contains('прием') || t.contains('консультация') || t.contains('осмотр') || t.contains('обход')) return 'Осмотр';
+    if (t.contains('прием') || t.contains('консультация') || t.contains('осмотр') || t.contains('обход') || t.contains('занятие с')) return 'Осмотр';
     if (t.contains('узи') || t.contains('экг') || t.contains('мрт') || t.contains('кт') || 
-        t.contains('рентген') || t.contains('флюоро') || t.contains('холтер') || t.contains('смад') || t.contains('эхокг')) {
+        t.contains('рентген') || t.contains('флюоро') || t.contains('холтер') || t.contains('смад') || 
+        t.contains('эхокг') || t.contains('ээг') || t.contains('спирометр') || t.contains('вэм')) {
       return 'Диагностика';
     }
-    if (t.contains('перевяз') || t.contains('инъекц') || t.contains('капельн') || t.contains('укол') || t.contains('массаж') || t.contains('терапия')) {
+    if (t.contains('перевяз') || t.contains('инъекц') || t.contains('капельн') || t.contains('укол') || 
+        t.contains('массаж') || t.contains('терапия') || t.contains('лфк') || t.contains('ходьба') || 
+        t.contains('механо') || t.contains('тренажер') || t.contains('стабило') || t.contains('гимнастика') || 
+        t.contains('электрофорез') || t.contains('магнито') || t.contains('лазер') || t.contains('увч') || 
+        t.contains('игло') || t.contains('грязе') || t.contains('парафин')) {
       return 'Процедура';
     }
     return 'Процедура';
@@ -145,6 +184,95 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       await _dbService.deleteAppointment(id);
       _loadData();
     }
+  }
+
+  Future<void> _deleteMood(int id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Удаление записи'),
+        content: const Text('Удалить эту запись из дневника настроения?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true), 
+            child: const Text('Удалить', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _dbService.deleteMoodEntry(id);
+      _loadData();
+    }
+  }
+
+  Future<void> _deleteQuestionnaireResult(int id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Удаление результата'),
+        content: const Text('Вы уверены, что хотите удалить этот результат опросника?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true), 
+            child: const Text('Удалить', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _dbService.deleteQuestionnaireResult(id);
+      _loadData();
+    }
+  }
+
+  void _showMoodDetails(MoodEntry mood) {
+    Color scoreColor;
+    if (mood.score >= 4) {
+      scoreColor = Colors.green;
+    } else if (mood.score == 3) {
+      scoreColor = Colors.orange;
+    } else {
+      scoreColor = Colors.red;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            Icon(Icons.psychology_rounded, color: scoreColor),
+            const SizedBox(width: 12),
+            const Text('Запись в дневнике'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Дата: ${mood.timestamp.substring(0, 16)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey)),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: scoreColor.withAlpha(26), borderRadius: BorderRadius.circular(8)),
+                child: Text('Оценка ИИ: ${mood.score}/5', style: TextStyle(color: scoreColor, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 16),
+              Text(mood.comment, style: const TextStyle(fontSize: 16, height: 1.5)),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Закрыть')),
+        ],
+      ),
+    );
   }
 
   Future<void> _addAppointment() async {
@@ -177,24 +305,25 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                   Autocomplete<String>(
                     optionsBuilder: (TextEditingValue textEditingValue) {
                       if (textEditingValue.text.isEmpty) return const Iterable<String>.empty();
-                      return _procedureOptions.where((option) => option.toLowerCase().startsWith(textEditingValue.text.toLowerCase()));
+                      return _procedureOptions.where((option) =>
+                          option.toLowerCase().startsWith(textEditingValue.text.toLowerCase()));
                     },
                     onSelected: (String selection) {
                       titleController.text = selection;
-                      typeController.text = _getAppointmentType(selection);
+                      setDialogState(() {
+                        typeController.text = _getAppointmentType(selection);
+                      });
                     },
                     fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
-                      textController.addListener(() {
-                        titleController.text = textController.text;
-                        // Автоматически обновляем тип при вводе
-                        final autoType = _getAppointmentType(textController.text);
-                        if (autoType != 'Процедура' || textController.text.toLowerCase().contains('перевяз')) {
-                          typeController.text = autoType;
-                        }
-                      });
                       return TextField(
                         controller: textController,
                         focusNode: focusNode,
+                        onChanged: (value) {
+                          titleController.text = value;
+                          setDialogState(() {
+                            typeController.text = _getAppointmentType(value);
+                          });
+                        },
                         decoration: InputDecoration(
                           labelText: 'Название мероприятия',
                           prefixIcon: const Icon(Icons.title_rounded),
@@ -205,7 +334,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                   ),
                   const SizedBox(height: 16),
                   TextField(
-                    controller: typeController, 
+                    controller: typeController,
                     decoration: InputDecoration(
                       labelText: 'Тип',
                       prefixIcon: const Icon(Icons.category_rounded),
@@ -214,7 +343,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                   ),
                   const SizedBox(height: 16),
                   TextField(
-                    controller: roomController, 
+                    controller: roomController,
                     decoration: InputDecoration(
                       labelText: 'Кабинет',
                       prefixIcon: const Icon(Icons.meeting_room_rounded),
@@ -226,16 +355,17 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                     optionsBuilder: (TextEditingValue textEditingValue) {
                       if (textEditingValue.text.isEmpty) return const Iterable<String>.empty();
                       final names = _allDoctors.map((d) => d.name).toList();
-                      return names.where((option) => option.toLowerCase().startsWith(textEditingValue.text.toLowerCase()));
+                      return names.where((option) =>
+                          option.toLowerCase().startsWith(textEditingValue.text.toLowerCase()));
                     },
                     onSelected: (String selection) {
                       doctorController.text = selection;
                     },
                     fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
-                      textController.addListener(() => doctorController.text = textController.text);
                       return TextField(
                         controller: textController,
                         focusNode: focusNode,
+                        onChanged: (value) => doctorController.text = value,
                         decoration: InputDecoration(
                           labelText: 'Врач',
                           prefixIcon: const Icon(Icons.person_search_rounded),
@@ -274,7 +404,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               onPressed: () async {
                 final title = titleController.text.trim();
                 final doctor = doctorController.text.trim();
-                
+
                 if (title.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Введите название мероприятия')));
                   return;
@@ -282,11 +412,11 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
 
                 final fullDateTime = DateTime(selectedDate.year, selectedDate.month, selectedDate.day, selectedTime.hour, selectedTime.minute);
                 await _dbService.insertAppointment(Appointment(
-                  patientId: widget.patient.id!, 
-                  type: typeController.text, 
+                  patientId: widget.patient.id!,
+                  type: typeController.text,
                   title: title,
-                  time: fullDateTime.toString(), 
-                  room: roomController.text, 
+                  time: fullDateTime.toString(),
+                  room: roomController.text,
                   doctor: doctor,
                 ));
                 if (!context.mounted) return;
@@ -388,51 +518,54 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
 
   Future<void> _addMood() async {
     final commentController = TextEditingController();
-    double currentScore = 3;
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-          title: const Text('Дневник настроения'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Оцените ваше состояние (1-5)'),
-              Slider(
-                value: currentScore, 
-                min: 1, max: 5, divisions: 4, 
-                label: currentScore.toInt().toString(), 
-                onChanged: (val) => setDialogState(() => currentScore = val),
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: const Text('Дневник настроения'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Опишите ваше самочувствие, и ИИ определит ваше состояние'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: commentController, 
+              maxLines: 4, 
+              decoration: InputDecoration(
+                hintText: 'Например: Сегодня чувствую себя бодро, выспался и готов к прогулке...', 
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              TextField(
-                controller: commentController, 
-                maxLines: 2, 
-                decoration: InputDecoration(
-                  hintText: 'Ваши мысли...', 
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
-            FilledButton(
-              onPressed: () async {
-                await _dbService.insertMoodEntry(MoodEntry(
-                  patientId: widget.patient.id!, score: currentScore.toInt(), comment: commentController.text.isEmpty ? "Без комментария" : commentController.text,
-                  timestamp: DateTime.now().toUtc().add(const Duration(hours: 3)).toString(),
-                  sentiment: AIService.analyzeSentiment(commentController.text),
-                ));
-                if (!context.mounted) return;
-                Navigator.pop(context);
-                _loadData();
-              },
-              child: const Text('Сохранить'),
             ),
           ],
         ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
+          FilledButton(
+            onPressed: () async {
+              final comment = commentController.text.trim();
+              if (comment.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Пожалуйста, напишите что-нибудь')));
+                return;
+              }
+
+              final calculatedScore = AIService.calculateMoodScore(comment);
+              final sentiment = AIService.analyzeSentiment(comment);
+
+              await _dbService.insertMoodEntry(MoodEntry(
+                patientId: widget.patient.id!, 
+                score: calculatedScore, 
+                comment: comment,
+                timestamp: DateTime.now().toUtc().add(const Duration(hours: 3)).toString(),
+                sentiment: sentiment,
+              ));
+              if (!context.mounted) return;
+              Navigator.pop(context);
+              _loadData();
+            },
+            child: const Text('Сохранить'),
+          ),
+        ],
       ),
     );
   }
@@ -728,25 +861,184 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
 
   Widget _buildMoodList() {
     if (_moods.isEmpty) return const Card(child: ListTile(title: Text('Дневник пуст')));
+    
+    final reversedMoods = _moods.reversed.toList();
+    final moodsToShow = _isMoodExpanded ? reversedMoods : reversedMoods.take(3).toList();
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Column(
-      children: _moods.reversed.take(3).map((m) => Card(
-        elevation: 0,
-        margin: const EdgeInsets.only(bottom: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3))),
-        child: ListTile(leading: Icon(m.sentiment == 'Positive' ? Icons.sentiment_very_satisfied_rounded : Icons.sentiment_neutral_rounded, color: m.sentiment == 'Positive' ? Colors.green : Colors.orange), title: Text(m.comment), subtitle: Text('Оценка: ${m.score}')),
-      )).toList(),
+      children: [
+        AnimatedSize(
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.fastOutSlowIn,
+          alignment: Alignment.topCenter,
+          child: Column(
+            children: List.generate(moodsToShow.length, (index) {
+              final m = moodsToShow[index];
+              Color scoreColor;
+              IconData moodIcon;
+              if (m.score >= 4) {
+                scoreColor = Colors.green;
+                moodIcon = Icons.sentiment_very_satisfied_rounded;
+              } else if (m.score == 3) {
+                scoreColor = Colors.orange;
+                moodIcon = Icons.sentiment_neutral_rounded;
+              } else {
+                scoreColor = Colors.red;
+                moodIcon = Icons.sentiment_very_dissatisfied_rounded;
+              }
+
+              // Эффект затухания для последней карточки в свернутом виде
+              final isLastInCollapsed = !_isMoodExpanded && index == 2 && reversedMoods.length > 3;
+
+              return Stack(
+                alignment: Alignment.bottomCenter,
+                children: [
+                  Card(
+                    elevation: 0,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    color: scoreColor.withValues(alpha: 0.05),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16), 
+                      side: BorderSide(color: scoreColor.withValues(alpha: 0.3))
+                    ),
+                    child: ListTile(
+                      onTap: () => _showMoodDetails(m),
+                      leading: Icon(moodIcon, color: scoreColor), 
+                      title: Text(m.comment, maxLines: 2, overflow: TextOverflow.ellipsis), 
+                      subtitle: Text('Оценка: ${m.score} • ${m.timestamp.substring(0, 16)}', style: TextStyle(color: scoreColor, fontWeight: FontWeight.bold)),
+                      trailing: !widget.isPatientView ? IconButton(
+                        icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                        onPressed: () => _deleteMood(m.id!),
+                      ) : null,
+                    ),
+                  ),
+                  if (isLastInCollapsed)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0),
+                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.8),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            }),
+          ),
+        ),
+        if (reversedMoods.length > 3)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Center(
+              child: GestureDetector(
+                onTap: () => setState(() => _isMoodExpanded = !_isMoodExpanded),
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(30),
+                      color: _isMoodExpanded 
+                        ? colorScheme.primaryContainer.withValues(alpha: 0.3)
+                        : colorScheme.primary.withValues(alpha: 0.1),
+                      border: Border.all(
+                        color: colorScheme.primary.withValues(alpha: 0.2),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AnimatedRotation(
+                          duration: const Duration(milliseconds: 300),
+                          turns: _isMoodExpanded ? 0.5 : 0,
+                          child: Icon(
+                            Icons.keyboard_double_arrow_down_rounded,
+                            color: colorScheme.primary,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          _isMoodExpanded ? 'СВЕРНУТЬ' : 'ВСЯ ИСТОРИЯ (${reversedMoods.length})',
+                          style: TextStyle(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 12,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
   Widget _buildQuestionnaireResults() {
     if (_qResults.isEmpty) return const Card(child: ListTile(title: Text('Нет результатов')));
     return Column(
-      children: _qResults.map((res) => Card(
-        elevation: 0,
-        margin: const EdgeInsets.only(bottom: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3))),
-        child: ListTile(title: Text(res.title), trailing: Text('${res.totalScore} баллов')),
-      )).toList(),
+      children: _qResults.map((res) {
+        Color resultColor;
+        if (res.totalScore <= 5) {
+          resultColor = Colors.green;
+        } else if (res.totalScore <= 10) {
+          resultColor = Colors.orange;
+        } else {
+          resultColor = Colors.red;
+        }
+
+        return Card(
+          elevation: 0,
+          margin: const EdgeInsets.only(bottom: 8),
+          color: resultColor.withValues(alpha: 0.05),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16), 
+            side: BorderSide(color: resultColor.withValues(alpha: 0.3))
+          ),
+          child: ListTile(
+            title: Text(res.title), 
+            subtitle: Text('Дата: ${res.date.substring(0, 16)}'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: resultColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: resultColor.withValues(alpha: 0.4)),
+                  ),
+                  child: Text(
+                    '${res.totalScore} баллов', 
+                    style: TextStyle(color: resultColor, fontWeight: FontWeight.bold)
+                  ),
+                ),
+                if (!widget.isPatientView) 
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                    onPressed: () => _deleteQuestionnaireResult(res.id!),
+                  ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }
