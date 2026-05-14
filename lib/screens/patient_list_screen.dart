@@ -23,10 +23,14 @@ class _PatientListScreenState extends State<PatientListScreen> {
   List<Patient> _patients = [];
   String _searchQuery = '';
   PatientSort _currentSort = PatientSort.nameAsc;
+  bool _showOnlyMyPatients = false;
 
   @override
   void initState() {
     super.initState();
+    if (widget.doctor != null) {
+      _showOnlyMyPatients = true;
+    }
     _loadPatients();
   }
 
@@ -125,8 +129,9 @@ class _PatientListScreenState extends State<PatientListScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     
     final filteredPatients = _patients.where((p) {
-      // Изменено: теперь поиск проверяет начало строки (по первой букве/слову)
-      return p.name.trim().toLowerCase().startsWith(_searchQuery.trim().toLowerCase());
+      final matchesSearch = p.name.trim().toLowerCase().startsWith(_searchQuery.trim().toLowerCase());
+      final matchesDoctor = !_showOnlyMyPatients || (widget.doctor != null && p.doctorId == widget.doctor!.id);
+      return matchesSearch && matchesDoctor;
     }).toList();
 
     return Scaffold(
@@ -180,13 +185,39 @@ class _PatientListScreenState extends State<PatientListScreen> {
                   onChanged: (value) => setState(() => _searchQuery = value),
                 ),
               ),
+              if (widget.doctor != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        FilterChip(
+                          label: const Text('Мои пациенты'),
+                          selected: _showOnlyMyPatients,
+                          onSelected: (selected) => setState(() => _showOnlyMyPatients = selected),
+                          selectedColor: colorScheme.primaryContainer,
+                          checkmarkColor: colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        FilterChip(
+                          label: const Text('Все пациенты'),
+                          selected: !_showOnlyMyPatients,
+                          onSelected: (selected) => setState(() => _showOnlyMyPatients = !selected),
+                          selectedColor: colorScheme.secondaryContainer,
+                          checkmarkColor: colorScheme.secondary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      _searchQuery.isEmpty ? 'Всего: ${_patients.length}' : 'Найдено: ${filteredPatients.length}',
+                      _searchQuery.isEmpty ? 'Всего: ${filteredPatients.length}' : 'Найдено: ${filteredPatients.length}',
                       style: TextStyle(color: colorScheme.outline, fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                     if (widget.hideAppBar) _buildSortButton(),
@@ -201,7 +232,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
                         children: [
                           Icon(Icons.search_off_rounded, size: 48, color: colorScheme.outline),
                           const SizedBox(height: 16),
-                          Text('Пациент на "$_searchQuery" не найден', style: TextStyle(color: colorScheme.outline)),
+                          Text('Пациенты не найдены', style: TextStyle(color: colorScheme.outline)),
                         ],
                       ),
                     )
@@ -210,22 +241,39 @@ class _PatientListScreenState extends State<PatientListScreen> {
                       itemCount: filteredPatients.length,
                       itemBuilder: (context, index) {
                         final p = filteredPatients[index];
+                        final isMyPatient = widget.doctor != null && p.doctorId == widget.doctor!.id;
+                        
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12),
                           child: Card(
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
-                              side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                              side: BorderSide(
+                                color: isMyPatient 
+                                  ? colorScheme.primary.withValues(alpha: 0.5)
+                                  : colorScheme.outlineVariant.withValues(alpha: 0.5),
+                                width: isMyPatient ? 2 : 1,
+                              ),
                             ),
                             child: ListTile(
                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                               leading: CircleAvatar(
-                                backgroundColor: colorScheme.primaryContainer,
-                                child: Icon(Icons.person_rounded, color: colorScheme.onPrimaryContainer),
+                                backgroundColor: isMyPatient ? colorScheme.primaryContainer : colorScheme.surfaceVariant,
+                                child: Icon(
+                                  Icons.person_rounded, 
+                                  color: isMyPatient ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant
+                                ),
                               ),
                               title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text('Дата Рождения: ${_formatDate(p.birthDate)}'),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Дата Рождения: ${_formatDate(p.birthDate)}'),
+                                  if (isMyPatient) 
+                                    Text('Ваш пациент', style: TextStyle(color: colorScheme.primary, fontSize: 12, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
                               trailing: Icon(Icons.chevron_right_rounded, color: colorScheme.primary),
                               onTap: () => Navigator.push(
                                 context,
