@@ -27,7 +27,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
-        setState(() {}); // Обновляем UI для скрытия/показа FAB
+        setState(() {});
       }
     });
     _loadData();
@@ -95,10 +95,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
       keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, size: 22),
+        prefixIcon: Icon(icon, size: 20),
         filled: true,
         fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
@@ -115,36 +115,58 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
     );
   }
 
-  void _showUserDialog({User? user}) async {
-    final isEditing = user != null;
+  void _showUserDialog({User? user, Patient? patient, Doctor? doctor}) async {
+    final isEditing = user != null || patient != null || doctor != null;
     final colorScheme = Theme.of(context).colorScheme;
+    final screenWidth = MediaQuery.of(context).size.width;
     
-    final loginController = TextEditingController(text: user?.login);
-    final passwordController = TextEditingController(text: user?.password);
-    UserRole selectedRole = user?.role ?? UserRole.patient;
+    User? targetUser = user;
+    if (targetUser == null && patient != null) {
+      try { targetUser = _users.firstWhere((u) => u.patientId == patient.id); } catch(_) {}
+    } else if (targetUser == null && doctor != null) {
+      try { targetUser = _users.firstWhere((u) => u.doctorId == doctor.id); } catch(_) {}
+    }
+
+    final loginController = TextEditingController(text: targetUser?.login);
+    final passwordController = TextEditingController(text: targetUser?.password);
+    UserRole selectedRole = targetUser?.role ?? (patient != null ? UserRole.patient : (doctor != null ? UserRole.doctor : UserRole.patient));
 
     final nameController = TextEditingController();
     final specController = TextEditingController();
     final phoneController = TextEditingController();
     final cabinetController = TextEditingController();
     final birthDateController = TextEditingController();
+    final contactController = TextEditingController();
+    int? selectedDoctorId;
 
-    int? profileId = isEditing ? (user.role == UserRole.doctor ? user.doctorId : user.patientId) : null;
+    int? profileId = patient?.id ?? doctor?.id ?? (targetUser?.role == UserRole.doctor ? targetUser?.doctorId : targetUser?.patientId);
 
-    if (isEditing) {
-      if (user.role == UserRole.doctor && user.doctorId != null) {
-        final doc = await _dbService.getDoctorById(user.doctorId!);
+    if (patient != null) {
+      nameController.text = patient.name;
+      birthDateController.text = patient.birthDate;
+      contactController.text = patient.relativeContact;
+      selectedDoctorId = patient.doctorId;
+    } else if (doctor != null) {
+      nameController.text = doctor.name;
+      specController.text = doctor.specialization;
+      phoneController.text = doctor.phone ?? '';
+      cabinetController.text = doctor.cabinet ?? '';
+    } else if (targetUser != null) {
+      if (targetUser.role == UserRole.doctor && targetUser.doctorId != null) {
+        final doc = await _dbService.getDoctorById(targetUser.doctorId!);
         if (doc != null) {
           nameController.text = doc.name;
           specController.text = doc.specialization;
           phoneController.text = doc.phone ?? '';
           cabinetController.text = doc.cabinet ?? '';
         }
-      } else if (user.role == UserRole.patient && user.patientId != null) {
-        final pat = await _dbService.getPatientById(user.patientId!);
+      } else if (targetUser.role == UserRole.patient && targetUser.patientId != null) {
+        final pat = await _dbService.getPatientById(targetUser.patientId!);
         if (pat != null) {
           nameController.text = pat.name;
           birthDateController.text = pat.birthDate;
+          contactController.text = pat.relativeContact;
+          selectedDoctorId = pat.doctorId;
         }
       }
     }
@@ -155,9 +177,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
           titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+          contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
           actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           title: Row(
             children: [
@@ -173,15 +196,18 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                   size: 24,
                 ),
               ),
-              const SizedBox(width: 16),
-              Text(
-                isEditing ? 'Редактирование' : 'Новый профиль',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  isEditing ? 'Редактирование' : 'Новый профиль',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
           content: SizedBox(
-            width: 400,
+            width: (screenWidth - 60).clamp(240.0, 380.0),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -203,12 +229,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                   const SizedBox(height: 12),
                   DropdownButtonFormField<UserRole>(
                     value: selectedRole,
+                    isExpanded: true,
+                    isDense: true,
                     decoration: InputDecoration(
                       labelText: 'Роль',
-                      prefixIcon: const Icon(Icons.shield_outlined, size: 22),
+                      prefixIcon: const Icon(Icons.shield_outlined, size: 20),
                       filled: true,
                       fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      contentPadding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
@@ -216,12 +244,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                     ),
                     items: UserRole.values.map((role) => DropdownMenuItem(
                       value: role,
-                      child: Text(role.displayName),
+                      child: Text(role.displayName, overflow: TextOverflow.ellipsis),
                     )).toList(),
                     onChanged: (val) => setDialogState(() => selectedRole = val!),
                   ),
                   if (selectedRole != UserRole.admin) ...[
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                     _dialogSectionTitle(context, 'ЛИЧНЫЕ ДАННЫЕ'),
                     _buildField(
                       controller: nameController,
@@ -239,6 +267,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                       Row(
                         children: [
                           Expanded(
+                            flex: 3,
                             child: _buildField(
                               controller: phoneController,
                               label: 'Телефон',
@@ -246,9 +275,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                               keyboardType: TextInputType.phone,
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          SizedBox(
-                            width: 110,
+                          const SizedBox(width: 8),
+                          Expanded(
+                            flex: 2,
                             child: _buildField(
                               controller: cabinetController,
                               label: 'Каб.',
@@ -277,6 +306,40 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                           }
                         },
                       ),
+                      const SizedBox(height: 12),
+                      _buildField(
+                        controller: contactController,
+                        label: 'Контакт родственника',
+                        icon: Icons.contact_phone_outlined,
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<int?>(
+                        value: selectedDoctorId,
+                        isExpanded: true,
+                        isDense: true,
+                        decoration: InputDecoration(
+                          labelText: 'Лечащий врач',
+                          prefixIcon: const Icon(Icons.medical_services_outlined, size: 20),
+                          filled: true,
+                          fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+                          contentPadding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        items: [
+                          const DropdownMenuItem<int?>(
+                            value: null, 
+                            child: Text('Не назначен', overflow: TextOverflow.ellipsis)
+                          ),
+                          ..._doctors.map((doc) => DropdownMenuItem<int?>(
+                            value: doc.id,
+                            child: Text(doc.name, overflow: TextOverflow.ellipsis),
+                          )),
+                        ],
+                        onChanged: (val) => setDialogState(() => selectedDoctorId = val),
+                      ),
                     ],
                   ],
                   const SizedBox(height: 16),
@@ -292,7 +355,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
             FilledButton.icon(
               style: FilledButton.styleFrom(
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
               onPressed: () async {
                 try {
@@ -305,9 +368,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                       phone: phoneController.text.trim(),
                       cabinet: cabinetController.text.trim(),
                     );
-                    if (isEditing && user.role == UserRole.doctor) {
+                    if (isEditing && (targetUser?.role == UserRole.doctor || doctor != null)) {
                       await _dbService.updateDoctor(doc);
-                      newProfileId = profileId;
                     } else {
                       newProfileId = await _dbService.insertDoctor(doc);
                     }
@@ -316,18 +378,18 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                       id: profileId,
                       name: nameController.text.trim(),
                       birthDate: birthDateController.text.trim(),
-                      relativeContact: 'Указано при регистрации',
+                      relativeContact: contactController.text.trim().isEmpty ? 'Не указан' : contactController.text.trim(),
+                      doctorId: selectedDoctorId,
                     );
-                    if (isEditing && user.role == UserRole.patient) {
+                    if (isEditing && (targetUser?.role == UserRole.patient || patient != null)) {
                       await _dbService.updatePatient(pat);
-                      newProfileId = profileId;
                     } else {
                       newProfileId = await _dbService.insertPatient(pat);
                     }
                   }
 
                   final userData = User(
-                    id: user?.id,
+                    id: targetUser?.id,
                     login: loginController.text.trim(),
                     password: passwordController.text.trim(),
                     role: selectedRole,
@@ -335,7 +397,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                     doctorId: selectedRole == UserRole.doctor ? newProfileId : null,
                   );
 
-                  if (isEditing) {
+                  if (isEditing && targetUser != null) {
                     await _dbService.updateUser(userData);
                   } else {
                     await _dbService.registerUser(userData);
@@ -362,14 +424,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
 
   Widget _dialogSectionTitle(BuildContext context, String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12, top: 4, left: 4),
+      padding: const EdgeInsets.only(bottom: 8, top: 4, left: 4),
       child: Text(
         title,
         style: TextStyle(
           fontWeight: FontWeight.w900,
-          fontSize: 11,
+          fontSize: 10,
           color: Theme.of(context).colorScheme.primary,
-          letterSpacing: 1.5,
+          letterSpacing: 1.2,
         ),
       ),
     );
@@ -399,13 +461,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                 _buildListView(_doctors, _buildDoctorTile),
               ],
             ),
-      floatingActionButton: _tabController.index == 0 
-          ? FloatingActionButton.extended(
-              onPressed: () => _showUserDialog(),
-              label: const Text('Добавить'),
-              icon: const Icon(Icons.person_add_rounded),
-            )
-          : null,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showUserDialog(),
+        label: const Text('Добавить'),
+        icon: const Icon(Icons.person_add_rounded),
+      ),
     );
   }
 
@@ -442,15 +502,24 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
       child: ListTile(
         leading: CircleAvatar(backgroundColor: colorScheme.primaryContainer, child: Icon(Icons.person_outline, color: colorScheme.onPrimaryContainer)),
         title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(p.birthDate),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete_outline, color: Colors.red),
-          onPressed: () async {
-            if (await _confirmDelete('Удаление', 'Удалить профиль ${p.name}?')) {
-              await _dbService.deletePatient(p.id!);
-              _loadData();
-            }
-          },
+        subtitle: Text('${p.birthDate} • ${p.relativeContact}'),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () => _showUserDialog(patient: p),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              onPressed: () async {
+                if (await _confirmDelete('Удаление', 'Удалить профиль ${p.name}?')) {
+                  await _dbService.deletePatient(p.id!);
+                  _loadData();
+                }
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -466,14 +535,23 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
         leading: CircleAvatar(backgroundColor: colorScheme.tertiaryContainer, child: Icon(Icons.medical_services_outlined, color: colorScheme.onTertiaryContainer)),
         title: Text(d.name, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(d.specialization),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete_outline, color: Colors.red),
-          onPressed: () async {
-            if (await _confirmDelete('Удаление', 'Удалить профиль врача ${d.name}?')) {
-              await _dbService.deleteDoctor(d.id!);
-              _loadData();
-            }
-          },
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () => _showUserDialog(doctor: d),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              onPressed: () async {
+                if (await _confirmDelete('Удаление', 'Удалить профиль врача ${d.name}?')) {
+                  await _dbService.deleteDoctor(d.id!);
+                  _loadData();
+                }
+              },
+            ),
+          ],
         ),
       ),
     );

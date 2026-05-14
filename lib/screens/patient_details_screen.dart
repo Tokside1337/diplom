@@ -45,6 +45,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   List<Doctor> _allDoctors = [];
   String _trend = 'Загрузка...';
   bool _isMoodExpanded = false;
+  Doctor? _assignedDoctor;
 
   static const List<String> _procedureOptions = [
     'ЭКГ (Электрокардиография)',
@@ -130,6 +131,13 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       final qres = await _dbService.getQuestionnaireResults(widget.patient.id!);
       final docs = await _dbService.getDoctors();
       
+      Doctor? assignedDoc;
+      if (widget.patient.doctorId != null) {
+        try {
+          assignedDoc = docs.firstWhere((d) => d.id == widget.patient.doctorId);
+        } catch (_) {}
+      }
+      
       if (mounted) {
         setState(() {
           _measurements = m;
@@ -137,6 +145,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
           _appointments = appts;
           _qResults = qres;
           _allDoctors = docs;
+          _assignedDoctor = assignedDoc;
           _trend = AIService.analyzeTrend(m);
         });
       }
@@ -740,11 +749,24 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5))),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        leading: CircleAvatar(backgroundColor: colorScheme.primaryContainer, child: Icon(Icons.person_rounded, color: colorScheme.onPrimaryContainer)),
-        title: Text(_formatNameShort(widget.patient.name), style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text('Дата рождения: ${widget.patient.birthDate}'),
+      child: Column(
+        children: [
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            leading: CircleAvatar(backgroundColor: colorScheme.primaryContainer, child: Icon(Icons.person_rounded, color: colorScheme.onPrimaryContainer)),
+            title: Text(_formatNameShort(widget.patient.name), style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text('Дата рождения: ${widget.patient.birthDate}'),
+          ),
+          if (_assignedDoctor != null) ...[
+            const Divider(height: 1, indent: 20, endIndent: 20),
+            ListTile(
+              dense: true,
+              leading: Icon(Icons.medical_services_outlined, color: colorScheme.secondary, size: 20),
+              title: Text('Ваш врач: ${_assignedDoctor!.name}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+              subtitle: Text('${_assignedDoctor!.specialization}${_assignedDoctor!.cabinet != null ? ' • Каб. ${_assignedDoctor!.cabinet}' : ''}', style: const TextStyle(fontSize: 12)),
+            ),
+          ],
+        ],
       ),
     );
   }

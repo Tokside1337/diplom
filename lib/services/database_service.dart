@@ -46,16 +46,6 @@ class DatabaseService {
 
   Future<void> _ensureTablesExist(Connection conn) async {
     await conn.execute('''
-      CREATE TABLE IF NOT EXISTS patients(
-        id SERIAL PRIMARY KEY,
-        name TEXT,
-        birth_date TEXT,
-        photo_path TEXT,
-        relative_contact TEXT
-      )
-    ''');
-
-    await conn.execute('''
       CREATE TABLE IF NOT EXISTS doctors(
         id SERIAL PRIMARY KEY,
         name TEXT,
@@ -64,6 +54,21 @@ class DatabaseService {
         cabinet TEXT
       )
     ''');
+
+    await conn.execute('''
+      CREATE TABLE IF NOT EXISTS patients(
+        id SERIAL PRIMARY KEY,
+        name TEXT,
+        birth_date TEXT,
+        photo_path TEXT,
+        relative_contact TEXT,
+        doctor_id INTEGER REFERENCES doctors(id) ON DELETE SET NULL
+      )
+    ''');
+
+    try {
+      await conn.execute("ALTER TABLE patients ADD COLUMN doctor_id INTEGER REFERENCES doctors(id) ON DELETE SET NULL");
+    } catch (e) {}
     
     await conn.execute('''
       CREATE TABLE IF NOT EXISTS diagnoses(
@@ -202,12 +207,13 @@ class DatabaseService {
   Future<int> insertPatient(Patient patient) async {
     final conn = await connection;
     final result = await conn.execute(
-      Sql.named('INSERT INTO patients (name, birth_date, photo_path, relative_contact) VALUES (@name, @birth_date, @photo_path, @relative_contact) RETURNING id'),
+      Sql.named('INSERT INTO patients (name, birth_date, photo_path, relative_contact, doctor_id) VALUES (@name, @birth_date, @photo_path, @relative_contact, @doc_id) RETURNING id'),
       parameters: {
         'name': patient.name,
         'birth_date': patient.birthDate,
         'photo_path': patient.photoPath,
         'relative_contact': patient.relativeContact,
+        'doc_id': patient.doctorId,
       },
     );
     return result.first[0] as int;
@@ -215,13 +221,14 @@ class DatabaseService {
 
   Future<List<Patient>> getPatients() async {
     final conn = await connection;
-    final result = await conn.execute('SELECT id, name, birth_date, photo_path, relative_contact FROM patients ORDER BY id');
+    final result = await conn.execute('SELECT id, name, birth_date, photo_path, relative_contact, doctor_id FROM patients ORDER BY id');
     return result.map((row) => Patient(
       id: row[0] as int,
       name: row[1] as String,
       birthDate: row[2] as String,
       photoPath: row[3] as String?,
       relativeContact: row[4] as String,
+      doctorId: row[5] as int?,
     )).toList();
   }
 
@@ -541,12 +548,13 @@ class DatabaseService {
   Future<void> updatePatient(Patient patient) async {
     final conn = await connection;
     await conn.execute(
-      Sql.named('UPDATE patients SET name = @name, birth_date = @birth, photo_path = @photo, relative_contact = @contact WHERE id = @id'),
+      Sql.named('UPDATE patients SET name = @name, birth_date = @birth, photo_path = @photo, relative_contact = @contact, doctor_id = @doc_id WHERE id = @id'),
       parameters: {
         'name': patient.name,
         'birth': patient.birthDate,
         'photo': patient.photoPath,
         'contact': patient.relativeContact,
+        'doc_id': patient.doctorId,
         'id': patient.id,
       },
     );
@@ -562,9 +570,16 @@ class DatabaseService {
 
   Future<Patient?> getPatientById(int id) async {
     final conn = await connection;
-    final result = await conn.execute(Sql.named('SELECT id, name, birth_date, photo_path, relative_contact FROM patients WHERE id = @id'), parameters: {'id': id});
+    final result = await conn.execute(Sql.named('SELECT id, name, birth_date, photo_path, relative_contact, doctor_id FROM patients WHERE id = @id'), parameters: {'id': id});
     if (result.isEmpty) return null;
     final row = result.first;
-    return Patient(id: row[0] as int, name: row[1] as String, birthDate: row[2] as String, photoPath: row[3] as String?, relativeContact: row[4] as String);
+    return Patient(
+      id: row[0] as int,
+      name: row[1] as String,
+      birthDate: row[2] as String,
+      photoPath: row[3] as String?,
+      relativeContact: row[4] as String,
+      doctorId: row[5] as int?,
+    );
   }
 }

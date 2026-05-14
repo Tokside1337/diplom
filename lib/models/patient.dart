@@ -4,6 +4,7 @@ class Patient {
   final String birthDate;
   final String? photoPath;
   final String relativeContact;
+  final int? doctorId; // New field for linked doctor
 
   Patient({
     this.id,
@@ -11,6 +12,7 @@ class Patient {
     required this.birthDate,
     this.photoPath,
     required this.relativeContact,
+    this.doctorId,
   });
 
   Map<String, dynamic> toMap() {
@@ -20,6 +22,7 @@ class Patient {
       'birthDate': birthDate,
       'photoPath': photoPath,
       'relativeContact': relativeContact,
+      'doctor_id': doctorId,
     };
   }
 
@@ -30,6 +33,7 @@ class Patient {
       birthDate: map['birthDate'],
       photoPath: map['photoPath'],
       relativeContact: map['relativeContact'],
+      doctorId: map['doctor_id'],
     );
   }
 }
