@@ -46,6 +46,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   String _trend = 'Загрузка...';
   bool _isMoodExpanded = false;
   Doctor? _assignedDoctor;
+  List<Map<String, dynamic>> _unreadReminders = [];
 
   static const List<String> _procedureOptions = [
     'ЭКГ (Электрокардиография)',
@@ -137,6 +138,16 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
           assignedDoc = docs.firstWhere((d) => d.id == widget.patient.doctorId);
         } catch (_) {}
       }
+
+      if (widget.isPatientView) {
+        final reminders = await _dbService.getUnreadReminders(widget.patient.id!);
+        if (mounted && reminders.isNotEmpty) {
+          setState(() {
+            _unreadReminders = reminders;
+          });
+          _showReminders();
+        }
+      }
       
       if (mounted) {
         setState(() {
@@ -152,6 +163,41 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     } catch (e) {
       debugPrint("Error loading data: $e");
     }
+  }
+
+  void _showReminders() {
+    if (_unreadReminders.isEmpty) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (var reminder in _unreadReminders) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Row(
+              children: [
+                Icon(Icons.notification_important_rounded, color: Colors.orange),
+                SizedBox(width: 12),
+                Text('Напоминание'),
+              ],
+            ),
+            content: Text(reminder['message']),
+            actions: [
+              TextButton(
+                onPressed: () async {
+                  await _dbService.markReminderAsRead(reminder['id']);
+                  if (context.mounted) Navigator.pop(context);
+                },
+                child: const Text('Понятно'),
+              ),
+            ],
+          ),
+        );
+      }
+      setState(() {
+        _unreadReminders = [];
+      });
+    });
   }
 
   String _getAppointmentType(String title) {
@@ -579,6 +625,38 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     );
   }
 
+  Future<void> _sendPressureReminder() async {
+    if (widget.doctor == null) return;
+    
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Напоминание'),
+        content: const Text('Отправить пациенту уведомление с просьбой измерить давление?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true), 
+            child: const Text('Отправить'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _dbService.sendReminder(
+        widget.patient.id!, 
+        widget.doctor!.id!, 
+        'Ваш лечащий врач просит вас измерить артериальное давление.'
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Напоминание отправлено')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.isPatientView) return _buildPatientProfile();
@@ -616,6 +694,9 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
             children: [
               _buildPatientHeader(),
               const SizedBox(height: 24),
+              _buildSectionTitle('Рекомендации и Анализ ИИ'),
+              _buildAICard(),
+              const SizedBox(height: 24),
               _buildSectionTitle('Мои показатели давления'),
               _buildChart(),
               const SizedBox(height: 12),
@@ -623,9 +704,6 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               const SizedBox(height: 24),
               _buildSectionTitle('План мероприятий'),
               _buildAppointmentsList(),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Рекомендации и Анализ ИИ'),
-              _buildAICard(),
               const SizedBox(height: 24),
               _buildSectionTitle('Результаты опросников'),
               _buildQuestionnaireResults(),
@@ -687,6 +765,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: _buildGlassFab([
+        _ActionItem(Icons.notification_add_rounded, 'Давление', Colors.red, _sendPressureReminder),
         _ActionItem(Icons.event_rounded, 'Мероприятие', Colors.orange, _addAppointment),
         _ActionItem(Icons.assignment_rounded, 'Опросник', Colors.blue, () => Navigator.push(context, MaterialPageRoute(builder: (context) => QuestionnaireScreen(patientId: widget.patient.id!))).then((_) => _loadData())),
       ]),
@@ -727,7 +806,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                               children: [
                                 Icon(item.icon, color: item.color, size: 22),
                                 const SizedBox(width: 8),
-                                Text(item.label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                Text(item.label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                               ],
                             ),
                           ),

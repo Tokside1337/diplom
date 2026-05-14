@@ -161,6 +161,17 @@ class DatabaseService {
       )
     ''');
 
+    await conn.execute('''
+      CREATE TABLE IF NOT EXISTS reminders(
+        id SERIAL PRIMARY KEY,
+        patient_id INTEGER REFERENCES patients(id) ON DELETE CASCADE,
+        doctor_id INTEGER REFERENCES doctors(id) ON DELETE CASCADE,
+        message TEXT,
+        is_read BOOLEAN DEFAULT FALSE,
+        timestamp TEXT
+      )
+    ''');
+
     final adminCheck = await conn.execute(
       Sql.named('SELECT id FROM users WHERE login = @login'),
       parameters: {'login': 'admin'},
@@ -176,6 +187,38 @@ class DatabaseService {
         },
       );
     }
+  }
+
+  Future<void> sendReminder(int patientId, int doctorId, String message) async {
+    final conn = await connection;
+    await conn.execute(
+      Sql.named('INSERT INTO reminders (patient_id, doctor_id, message, timestamp) VALUES (@pId, @dId, @msg, @ts)'),
+      parameters: {
+        'pId': patientId,
+        'dId': doctorId,
+        'msg': message,
+        'ts': DateTime.now().toIso8601String(),
+      },
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getUnreadReminders(int patientId) async {
+    final conn = await connection;
+    final result = await conn.execute(
+      Sql.named('SELECT id, doctor_id, message, timestamp FROM reminders WHERE patient_id = @pId AND is_read = FALSE'),
+      parameters: {'pId': patientId},
+    );
+    return result.map((row) => {
+      'id': row[0],
+      'doctor_id': row[1],
+      'message': row[2],
+      'timestamp': row[3],
+    }).toList();
+  }
+
+  Future<void> markReminderAsRead(int id) async {
+    final conn = await connection;
+    await conn.execute(Sql.named('UPDATE reminders SET is_read = TRUE WHERE id = @id'), parameters: {'id': id});
   }
 
   Future<int> insertDoctor(Doctor doctor) async {
