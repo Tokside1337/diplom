@@ -489,9 +489,9 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   }
 
   Future<void> _addMeasurement() async {
-    final systolicController = TextEditingController(text: '120');
-    final diastolicController = TextEditingController(text: '80');
-    final pulseController = TextEditingController(text: '70');
+    final systolicController = TextEditingController();
+    final diastolicController = TextEditingController();
+    final pulseController = TextEditingController();
     final colorScheme = Theme.of(context).colorScheme;
 
     showDialog(
@@ -543,6 +543,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               keyboardType: TextInputType.number, 
               decoration: InputDecoration(
                 labelText: 'Пульс', 
+                hintText: '70',
                 prefixIcon: const Icon(Icons.favorite_rounded, color: Colors.red),
                 suffixText: 'уд/мин',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
