@@ -45,6 +45,8 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   List<Doctor> _allDoctors = [];
   String _trend = 'Загрузка...';
   bool _isMoodExpanded = false;
+  bool _isAppointmentsExpanded = false;
+  bool _isQuestionnaireExpanded = false;
   Doctor? _assignedDoctor;
   List<Map<String, dynamic>> _unreadReminders = [];
 
@@ -913,50 +915,138 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     if (_appointments.isEmpty) return const Card(child: ListTile(title: Text('Мероприятий нет')));
     final colorScheme = Theme.of(context).colorScheme;
     
-    return Column(
-      children: _appointments.map((app) {
-        Color? statusColor;
-        IconData? statusIcon;
-        
-        if (app.status == 'completed') {
-          statusColor = Colors.green;
-          statusIcon = Icons.check_circle_rounded;
-        } else if (app.status == 'missed') {
-          statusColor = Colors.red;
-          statusIcon = Icons.cancel_rounded;
-        } else if (app.status == 'waiting') {
-          statusColor = Colors.orange;
-          statusIcon = Icons.access_time_filled_rounded;
-        }
+    final reversedAppts = _appointments.reversed.toList();
+    final apptsToShow = _isAppointmentsExpanded ? reversedAppts : reversedAppts.take(3).toList();
 
-        return Card(
-          elevation: 0,
-          margin: const EdgeInsets.only(bottom: 8),
-          color: statusColor?.withValues(alpha: 0.08),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16), 
-            side: BorderSide(
-              color: statusColor?.withValues(alpha: 0.4) ?? colorScheme.outlineVariant.withValues(alpha: 0.4)
-            )
-          ),
-          child: ListTile(
-            title: Text(app.title, style: const TextStyle(fontWeight: FontWeight.bold)), 
-            subtitle: Text('${app.doctor} • Каб. ${app.room}'),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (statusIcon != null) 
-                  Icon(statusIcon, color: statusColor, size: 20),
-                if (!widget.isPatientView) 
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
-                    onPressed: () => _deleteAppointment(app.id!),
+    return Column(
+      children: [
+        AnimatedSize(
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.fastOutSlowIn,
+          alignment: Alignment.topCenter,
+          child: Column(
+            children: List.generate(apptsToShow.length, (index) {
+              final app = apptsToShow[index];
+              Color? statusColor;
+              IconData? statusIcon;
+              
+              if (app.status == 'completed') {
+                statusColor = Colors.green;
+                statusIcon = Icons.check_circle_rounded;
+              } else if (app.status == 'missed') {
+                statusColor = Colors.red;
+                statusIcon = Icons.cancel_rounded;
+              } else if (app.status == 'waiting') {
+                statusColor = Colors.orange;
+                statusIcon = Icons.access_time_filled_rounded;
+              }
+
+              final isLastInCollapsed = !_isAppointmentsExpanded && index == 2 && reversedAppts.length > 3;
+
+              return Stack(
+                alignment: Alignment.bottomCenter,
+                children: [
+                  Card(
+                    elevation: 0,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    color: statusColor?.withValues(alpha: 0.08),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16), 
+                      side: BorderSide(
+                        color: statusColor?.withValues(alpha: 0.4) ?? colorScheme.outlineVariant.withValues(alpha: 0.4)
+                      )
+                    ),
+                    child: ListTile(
+                      title: Text(app.title, style: const TextStyle(fontWeight: FontWeight.bold)), 
+                      subtitle: Text('${app.doctor} • Каб. ${app.room}'),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (statusIcon != null) 
+                            Icon(statusIcon, color: statusColor, size: 20),
+                          if (!widget.isPatientView) 
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                              onPressed: () => _deleteAppointment(app.id!),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
-              ],
+                  if (isLastInCollapsed)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0),
+                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.8),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            }),
+          ),
+        ),
+        if (reversedAppts.length > 3)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Center(
+              child: GestureDetector(
+                onTap: () => setState(() => _isAppointmentsExpanded = !_isAppointmentsExpanded),
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(30),
+                      color: _isAppointmentsExpanded 
+                        ? colorScheme.primaryContainer.withValues(alpha: 0.3)
+                        : colorScheme.primary.withValues(alpha: 0.1),
+                      border: Border.all(
+                        color: colorScheme.primary.withValues(alpha: 0.2),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AnimatedRotation(
+                          duration: const Duration(milliseconds: 300),
+                          turns: _isAppointmentsExpanded ? 0.5 : 0,
+                          child: Icon(
+                            Icons.keyboard_double_arrow_down_rounded,
+                            color: colorScheme.primary,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          _isAppointmentsExpanded ? 'СВЕРНУТЬ' : 'ВСЯ ИСТОРИЯ (${reversedAppts.length})',
+                          style: TextStyle(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 12,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
-        );
-      }).toList(),
+      ],
     );
   }
 
@@ -1093,53 +1183,143 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
 
   Widget _buildQuestionnaireResults() {
     if (_qResults.isEmpty) return const Card(child: ListTile(title: Text('Нет результатов')));
-    return Column(
-      children: _qResults.map((res) {
-        Color resultColor;
-        if (res.totalScore <= 5) {
-          resultColor = Colors.green;
-        } else if (res.totalScore <= 10) {
-          resultColor = Colors.orange;
-        } else {
-          resultColor = Colors.red;
-        }
+    
+    final reversedQResults = _qResults.reversed.toList();
+    final qResultsToShow = _isQuestionnaireExpanded ? reversedQResults : reversedQResults.take(3).toList();
+    final colorScheme = Theme.of(context).colorScheme;
 
-        return Card(
-          elevation: 0,
-          margin: const EdgeInsets.only(bottom: 8),
-          color: resultColor.withValues(alpha: 0.05),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16), 
-            side: BorderSide(color: resultColor.withValues(alpha: 0.3))
-          ),
-          child: ListTile(
-            title: Text(res.title), 
-            subtitle: Text('Дата: ${res.date.substring(0, 16)}'),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: resultColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: resultColor.withValues(alpha: 0.4)),
+    return Column(
+      children: [
+        AnimatedSize(
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.fastOutSlowIn,
+          alignment: Alignment.topCenter,
+          child: Column(
+            children: List.generate(qResultsToShow.length, (index) {
+              final res = qResultsToShow[index];
+              Color resultColor;
+              if (res.totalScore <= 5) {
+                resultColor = Colors.green;
+              } else if (res.totalScore <= 10) {
+                resultColor = Colors.orange;
+              } else {
+                resultColor = Colors.red;
+              }
+
+              final isLastInCollapsed = !_isQuestionnaireExpanded && index == 2 && reversedQResults.length > 3;
+
+              return Stack(
+                alignment: Alignment.bottomCenter,
+                children: [
+                  Card(
+                    elevation: 0,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    color: resultColor.withValues(alpha: 0.05),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16), 
+                      side: BorderSide(color: resultColor.withValues(alpha: 0.3))
+                    ),
+                    child: ListTile(
+                      title: Text(res.title), 
+                      subtitle: Text('Дата: ${res.date.substring(0, 16)}'),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: resultColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: resultColor.withValues(alpha: 0.4)),
+                            ),
+                            child: Text(
+                              '${res.totalScore} баллов', 
+                              style: TextStyle(color: resultColor, fontWeight: FontWeight.bold)
+                            ),
+                          ),
+                          if (!widget.isPatientView) 
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                              onPressed: () => _deleteQuestionnaireResult(res.id!),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
-                  child: Text(
-                    '${res.totalScore} баллов', 
-                    style: TextStyle(color: resultColor, fontWeight: FontWeight.bold)
+                  if (isLastInCollapsed)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0),
+                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.8),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            }),
+          ),
+        ),
+        if (reversedQResults.length > 3)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Center(
+              child: GestureDetector(
+                onTap: () => setState(() => _isQuestionnaireExpanded = !_isQuestionnaireExpanded),
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(30),
+                      color: _isQuestionnaireExpanded 
+                        ? colorScheme.primaryContainer.withValues(alpha: 0.3)
+                        : colorScheme.primary.withValues(alpha: 0.1),
+                      border: Border.all(
+                        color: colorScheme.primary.withValues(alpha: 0.2),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AnimatedRotation(
+                          duration: const Duration(milliseconds: 300),
+                          turns: _isQuestionnaireExpanded ? 0.5 : 0,
+                          child: Icon(
+                            Icons.keyboard_double_arrow_down_rounded,
+                            color: colorScheme.primary,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          _isQuestionnaireExpanded ? 'СВЕРНУТЬ' : 'ВСЯ ИСТОРИЯ (${reversedQResults.length})',
+                          style: TextStyle(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 12,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                if (!widget.isPatientView) 
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
-                    onPressed: () => _deleteQuestionnaireResult(res.id!),
-                  ),
-              ],
+              ),
             ),
           ),
-        );
-      }).toList(),
+      ],
     );
   }
 }
