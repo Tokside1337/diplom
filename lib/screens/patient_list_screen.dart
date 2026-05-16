@@ -259,7 +259,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
                             child: ListTile(
                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                               leading: CircleAvatar(
-                                backgroundColor: isMyPatient ? colorScheme.primaryContainer : colorScheme.surfaceVariant,
+                                backgroundColor: isMyPatient ? colorScheme.primaryContainer : colorScheme.surfaceContainerHighest,
                                 child: Icon(
                                   Icons.person_rounded, 
                                   color: isMyPatient ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant

@@ -229,9 +229,9 @@ class AIService {
       final avgMood = recentMoods.map((m) => m.score).reduce((a, b) => a + b) / recentMoods.length;
 
       if (avgMood < 2.5) {
-        return '😔 Эмоциональное состояние требует внимания. ${pressureAnalysis} Рекомендуется психологическая поддержка.';
+        return '😔 Эмоциональное состояние требует внимания. $pressureAnalysis Рекомендуется психологическая поддержка.';
       } else if (avgMood > 4) {
-        return '😊 Отличное эмоциональное состояние! ${pressureAnalysis}';
+        return '😊 Отличное эмоциональное состояние! $pressureAnalysis';
       }
     }
 

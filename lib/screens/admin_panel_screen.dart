@@ -97,7 +97,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
         labelText: label,
         prefixIcon: Icon(icon, size: 20),
         filled: true,
-        fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+        fillColor: colorScheme.surfaceContainerHighest.withAlpha(76),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -228,14 +228,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<UserRole>(
-                    value: selectedRole,
+                    initialValue: selectedRole,
                     isExpanded: true,
                     isDense: true,
                     decoration: InputDecoration(
                       labelText: 'Роль',
                       prefixIcon: const Icon(Icons.shield_outlined, size: 20),
                       filled: true,
-                      fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+                      fillColor: colorScheme.surfaceContainerHighest.withAlpha(76),
                       contentPadding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -314,14 +314,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<int?>(
-                        value: selectedDoctorId,
+                        initialValue: selectedDoctorId,
                         isExpanded: true,
                         isDense: true,
                         decoration: InputDecoration(
                           labelText: 'Лечащий врач',
                           prefixIcon: const Icon(Icons.medical_services_outlined, size: 20),
                           filled: true,
-                          fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+                          fillColor: colorScheme.surfaceContainerHighest.withAlpha(76),
                           contentPadding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
@@ -485,7 +485,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: colorScheme.outlineVariant.withAlpha(128))),
       child: ListTile(
-        leading: CircleAvatar(backgroundColor: colorScheme.surfaceVariant, child: Icon(Icons.account_circle_outlined, color: colorScheme.primary)),
+        leading: CircleAvatar(backgroundColor: colorScheme.surfaceContainerHighest, child: Icon(Icons.account_circle_outlined, color: colorScheme.primary)),
         title: Text(user.login, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text('Роль: ${user.role.displayName}'),
         trailing: IconButton(icon: const Icon(Icons.edit_outlined), onPressed: () => _showUserDialog(user: user)),

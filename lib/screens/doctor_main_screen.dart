@@ -498,7 +498,7 @@ class _DoctorSettingsTab extends StatelessWidget {
                     ),
                     Text(
                       'Версия 1.0.0',
-                      style: TextStyle(color: colorScheme.onPrimaryContainer.withOpacity(0.7)),
+                      style: TextStyle(color: colorScheme.onPrimaryContainer.withValues(alpha: 0.7)),
                     ),
                   ],
                 ),
