@@ -4,12 +4,14 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:postgres/postgres.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 
 const String _dbHost = 'localhost';
 const int _dbPort = 5432;
 const String _dbName = 'rehab_db';
 const String _dbUser = 'postgres';
 const String _dbPass = '1337';
+const String _aiApiKey = 'AIzaSyDAz3E57uUFa1wGarxoBa0GMPAdP5bbq00';
 
 late Connection conn;
 
@@ -26,6 +28,48 @@ void main() async {
   }
 
   final router = Router();
+
+  // --- AI CHAT ---
+  router.post('/ai/chat', (Request req) async {
+    try {
+      final body = jsonDecode(await req.readAsString());
+      final message = body['message'] as String;
+      final patientId = body['patientId'] as int;
+      final isDoctor = body['isDoctor'] as bool? ?? false;
+
+      String contextData = '';
+      if (patientId > 0) {
+        // Fetch patient info
+        final pRes = await conn.execute(Sql.named('SELECT name, birth_date FROM patients WHERE id = @id'), parameters: {'id': patientId});
+        if (pRes.isNotEmpty) {
+          final p = pRes.first;
+          final mRes = await conn.execute(Sql.named('SELECT pressure_systolic, pressure_diastolic FROM measurements WHERE patient_id = @id ORDER BY timestamp DESC LIMIT 5'), parameters: {'id': patientId});
+          final moodRes = await conn.execute(Sql.named('SELECT comment FROM mood_entries WHERE patient_id = @id ORDER BY timestamp DESC LIMIT 3'), parameters: {'id': patientId});
+
+          contextData = 'Контекст пациента:\n'
+              'Имя: ${p[0]}\n'
+              'Дата рождения: ${p[1]}\n'
+              'Последние замеры давления: ${mRes.map((m) => "${(m[0] as num).toInt()}/${(m[1] as num).toInt()}").join(", ")}\n'
+              'Последние записи настроения: ${moodRes.map((m) => m[0]).join("; ")}\n';
+        }
+      }
+
+      final systemPrompt = isDoctor ? _doctorPrompt : _patientPrompt;
+      final model = GenerativeModel(
+        model: 'gemini-3.1-flash-lite', // Используем актуальный тег модели
+        apiKey: _aiApiKey,
+        systemInstruction: Content.system(systemPrompt),
+      );
+
+      final prompt = contextData.isNotEmpty ? '$contextData\n\nЗапрос: $message' : message;
+      final response = await model.generateContent([Content.text(prompt)]);
+      
+      return Response.ok(jsonEncode({'text': response.text ?? 'Не удалось получить ответ.'}));
+    } catch (e) {
+      stderr.writeln('AI Chat Error: $e');
+      return Response.internalServerError(body: jsonEncode({'error': e.toString()}));
+    }
+  });
 
   // --- USERS ---
   router.post('/login', (Request req) async {
@@ -291,3 +335,25 @@ Middleware _corsMiddleware = (Handler innerHandler) {
     return response.change(headers: {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS', 'Access-Control-Allow-Headers': 'Origin, Content-Type'});
   };
 };
+
+const String _patientPrompt = '''
+Вы — дружелюбный и поддерживающий ИИ-ассистент по реабилитации "РеСтарт". 
+ВАША РОЛЬ: Помогать пациенту следить за здоровьем, мотивировать его и объяснять простыми словами медицинские показатели.
+ВАША ЗАДАЧА: Отвечать на вопросы пациента, давать советы по образу жизни и режиму дня.
+ОГРАНИЧЕНИЯ: 
+1. НИКОГДА не назначайте лекарства и дозировки.
+2. Не ставьте окончательные диагнозы. 
+3. Если вопрос касается серьезных жалоб, всегда рекомендуйте обратиться к лечащему врачу.
+4. Избегайте сложной медицинской терминологии.
+ФОРМАТ: Дружелюбный, эмпатичный, короткие абзацы. Используйте эмодзи.
+''';
+
+const String _doctorPrompt = '''
+Вы — высококвалифицированный медицинский ИИ-эксперт, ассистент врача в системе "РеСтарт".
+ВАША РОЛЬ: Помощь в клиническом анализе данных пациента и предоставление справочной информации по протоколам реабилитации.
+ВАША ЗАДАЧА: Анализировать тренды показателей, подсвечивать аномалии и предлагать возможные варианты коррекции терапии на основе доказательной медицины.
+ОГРАНИЧЕНИЯ: 
+1. Напоминайте, что окончательное решение принимает только врач.
+2. Будьте объективны и точны.
+ФОРМАТ: Профессиональный, лаконичный. Используйте списки (bullet points). Допускается использование медицинской терминологии.
+''';

@@ -1,8 +1,47 @@
+import 'dart:convert';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:http/http.dart' as http;
 import 'package:diplom/models/medical_models.dart';
 import 'package:diplom/models/patient.dart';
 
 class AIService {
-  /// Вспомогательный метод для расчета числового веса текста
+  static String get _baseUrl {
+    if (kIsWeb) return 'http://localhost:8080';
+    try {
+      if (Platform.isAndroid) return 'http://10.0.2.2:8080';
+    } catch (_) {}
+    return 'http://localhost:8080';
+  }
+
+  /// Чат с ИИ-консультантом через Backend API
+  static Future<String> chatWithAI(String message, int patientId, {bool isDoctor = false}) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/ai/chat'),
+        body: jsonEncode({
+          'message': message,
+          'patientId': patientId,
+          'isDoctor': isDoctor,
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['text'] ?? 'Не удалось получить ответ.';
+      } else {
+        final errorData = jsonDecode(response.body);
+        debugPrint('AI Server Error: ${errorData['error']}');
+        return 'Сервер ИИ вернул ошибку. Попробуйте позже.';
+      }
+    } catch (e) {
+      debugPrint('AI Connection Error: $e');
+      return 'Ошибка связи с сервером ИИ. Убедитесь, что сервер запущен и доступен.';
+    }
+  }
+
+  /// Вспомогательный метод для расчета числового веса текста (остается на клиенте для мгновенной оценки)
   static double _calculateRawScore(String text) {
     if (text.isEmpty) return 0.0;
     final normalizedText = text.toLowerCase();
@@ -236,153 +275,5 @@ class AIService {
     }
 
     return pressureAnalysis;
-  }
-
-  /// Чат с ИИ-консультантом
-  static Future<String> chatWithAI(String message, int patientId, {bool isDoctor = false}) async {
-    final normalizedMessage = message.toLowerCase().trim();
-
-    if (isDoctor) {
-      if (normalizedMessage.contains('привет') || normalizedMessage.contains('здравствуй')) {
-        return 'Здравствуйте, коллега! Я ваш интеллектуальный помощник. Могу помочь проанализировать данные пациентов или ответить на медицинские вопросы.';
-      }
-      if (normalizedMessage.contains('анализ') || normalizedMessage.contains('пациент')) {
-        return 'Для анализа данных конкретного пациента, пожалуйста, перейдите в его профиль. В общем чате я могу проконсультировать по общим протоколам реабилитации и нормам показателей.';
-      }
-      if (normalizedMessage.contains('норма') || normalizedMessage.contains('показател')) {
-        return 'Напомню основные целевые показатели:\n'
-            '• АД: <140/90 мм рт.ст. (целевое <130/80)\n'
-            '• Пульс покой: 60-80 уд/мин\n'
-            '• ЧДД: 16-20 в мин\n'
-            '• Сатурация: >95%';
-      }
-      if (normalizedMessage.contains('птср') || normalizedMessage.contains('реабилитация')) {
-        return 'При ПТСР рекомендуются:\n'
-            '1. КПТ-ориентированная терапия\n'
-            '2. Групповые занятия\n'
-            '3. Мониторинг вегетативных показателей (АД, пульс)\n'
-            '4. Фармакотерапия по показаниям (СИОЗС)';
-      }
-      return 'Я готов помочь в анализе клинических случаев. Вы можете спросить о нормах показателей, протоколах реабилитации или интерпретации данных.';
-    }
-
-    if (normalizedMessage.contains('привет') || normalizedMessage.contains('здравствуй') ||
-        normalizedMessage.contains('добрый день') || normalizedMessage.contains('доброе утро') ||
-        normalizedMessage == 'здравствуйте') {
-      return 'Здравствуйте! Я ваш ИИ-консультант. Как вы себя чувствуете сегодня?';
-    }
-
-    if (normalizedMessage.contains('давление') || normalizedMessage.contains('тонометр')) {
-      return '📊 Давление - важный показатель сердечно-сосудистой системы.\n\n'
-          'Нормальные значения: 120/80 мм рт.ст.\n\n'
-          '⚠️ Тревожные зоны:\n'
-          '• Высокое давление: >140/90 - требует консультации врача\n'
-          '• Критически высокое: >180/120 - срочно вызывайте скорую!\n'
-          '• Низкое давление: <90/60 - возможна слабость, головокружение\n\n'
-          'Рекомендуется измерять давление ежедневно в одно и то же время, '
-          'в спокойном состоянии, после 5-минутного отдыха.';
-    }
-
-    if (normalizedMessage.contains('пульс') || normalizedMessage.contains('сердцебиение')) {
-      return '❤️ Нормальный пульс в покое: 60-90 ударов в минуту.\n\n'
-          '• Брадикардия (редкий пульс): <60 уд/мин\n'
-          '• Тахикардия (частый пульс): >100 уд/мин\n\n'
-          'Регулярные физические упражнения помогают нормализовать пульс. '
-          'Если отклонения сохраняются, проконсультируйтесь с кардиологом.';
-    }
-
-    if (normalizedMessage.contains('сон') || normalizedMessage.contains('бессонница') ||
-        normalizedMessage.contains('сплю') || normalizedMessage.contains('не сплю')) {
-      return '😴 Здоровый сон критически важен для нормализации давления.\n\n'
-          'Рекомендации:\n'
-          '• Спите 7-8 часов в сутки\n'
-          '• Ложитесь и вставайте в одно время\n'
-          '• За час до сна откажитесь от экранов\n'
-          '• Проветривайте спальню перед сном\n'
-          '• Избегайте кофеина после обеда\n\n'
-          'При хронической бессоннице обратитесь к врачу.';
-    }
-
-    if (normalizedMessage.contains('стресс') || normalizedMessage.contains('тревога') ||
-        normalizedMessage.contains('нервы') || normalizedMessage.contains('волнуюсь') ||
-        normalizedMessage.contains('беспокоюсь')) {
-      return '🧘 Стресс и тревога негативно влияют на давление и общее состояние.\n\n'
-          'Эффективные методы:\n'
-          '• Дыхательные упражнения (квадратное дыхание: 4 сек вдох - 4 задержка - 4 выдох - 4 пауза)\n'
-          '• Медитация и майндфулнес\n'
-          '• Прогулки на свежем воздухе\n'
-          '• Хобби и отвлечение\n\n'
-          'Если тревога не проходит, обратитесь к психологу.';
-    }
-
-    if (normalizedMessage.contains('лечение') || normalizedMessage.contains('таблетки') ||
-        normalizedMessage.contains('лекарство') || normalizedMessage.contains('препарат') ||
-        normalizedMessage.contains('лечусь')) {
-      return '💊 Важные правила приема лекарств:\n\n'
-          '• Всегда принимайте препараты строго по назначению врача\n'
-          '• Не пропускайте прием и не меняйте дозировку самостоятельно\n'
-          '• Не прекращайте лечение резко без консультации\n'
-          '• Ведите дневник приема и отмечайте побочные эффекты\n\n'
-          'Если что-то беспокоит - обсудите с лечащим врачом!';
-    }
-
-    if (normalizedMessage.contains('питание') || normalizedMessage.contains('есть') ||
-        normalizedMessage.contains('диета') || normalizedMessage.contains('соль') ||
-        normalizedMessage.contains('кушать') || normalizedMessage.contains('ем')) {
-      return '🥗 Правильное питание - основа здорового давления!\n\n'
-          'Рекомендуется:\n'
-          '• Ограничить соль (менее 5 г в день)\n'
-          '• Больше овощей и фруктов\n'
-          '• Цельнозерновые продукты\n'
-          '• Нежирное мясо и рыбу\n'
-          '• Орехи и бобовые\n\n'
-          'Избегайте:\n'
-          '• Фастфуда и полуфабрикатов\n'
-          '• Жирной и жареной пищи\n'
-          '• Сладких газированных напитков\n'
-          '• Алкоголя';
-    }
-
-    if (normalizedMessage.contains('активность') || normalizedMessage.contains('спорт') ||
-        normalizedMessage.contains('лфк') || normalizedMessage.contains('ходьба') ||
-        normalizedMessage.contains('зарядка') || normalizedMessage.contains('упражнения')) {
-      return '🏃‍♂️ Физическая активность помогает нормализовать давление!\n\n'
-          'Рекомендации:\n'
-          '• 30-40 минут ходьбы ежедневно\n'
-          '• Плавание 2-3 раза в неделю\n'
-          '• Легкая йога или стретчинг\n'
-          '• Дыхательная гимнастика\n\n'
-          'Важно:\n'
-          '• Начинайте постепенно\n'
-          '• Слушайте организм\n'
-          '• При гипертонии избегайте тяжелых нагрузок';
-    }
-
-    if (normalizedMessage.contains('спасибо')) {
-      return 'Пожалуйста! Рад был помочь. Если у вас появятся другие вопросы, обращайтесь. Всего доброго и крепкого здоровья! 💙';
-    }
-
-    if (normalizedMessage.contains('как дела') || normalizedMessage.contains('как настроение') ||
-        normalizedMessage.contains('как жизнь') || normalizedMessage.contains('как ты')) {
-      return 'У меня всё отлично! 😊\n\n'
-          'Главное - чтобы вы хорошо себя чувствовали. Как ваше давление сегодня? '
-          'Не забывайте регулярно измерять и записывать показатели. '
-          'Если что-то беспокоит - я здесь, чтобы помочь!';
-    }
-
-    if (normalizedMessage.contains('пока') || normalizedMessage.contains('до свидания') ||
-        normalizedMessage.contains('до встречи')) {
-      return 'До свидания! Берегите себя и следите за давлением. Если понадобится помощь - я всегда здесь. Всего доброго! 👋';
-    }
-
-    return 'Я ваш ИИ-консультант по здоровью. Могу помочь с вопросами:\n\n'
-        '• Давление и его нормы 📊\n'
-        '• Пульс и сердечный ритм ❤️\n'
-        '• Борьба со стрессом и тревогой 🧘\n'
-        '• Здоровый сон и режим дня 😴\n'
-        '• Правильное питание 🥗\n'
-        '• Физическая активность 🏃\n'
-        '• Прием лекарств и лечение 💊\n\n'
-        'Что вас беспокоит сегодня? Я постараюсь помочь! 🌟';
   }
 }

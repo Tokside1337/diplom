@@ -40,7 +40,6 @@ class DatabaseService {
         );
       }
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('loginUser error: $e');
     }
     return null;
@@ -61,7 +60,6 @@ class DatabaseService {
         )).toList();
       }
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('getAllUsers error: $e');
     }
     return [];
@@ -81,7 +79,6 @@ class DatabaseService {
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('registerUser error: $e');
     }
   }
@@ -101,7 +98,6 @@ class DatabaseService {
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('updateUser error: $e');
     }
   }
@@ -110,7 +106,6 @@ class DatabaseService {
     try {
       await http.delete(Uri.parse('$_baseUrl/users/$id'));
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('deleteUser error: $e');
     }
   }
@@ -130,7 +125,6 @@ class DatabaseService {
         )).toList();
       }
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('getDoctors error: $e');
     }
     return [];
@@ -150,7 +144,6 @@ class DatabaseService {
         );
       }
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('getDoctorById error: $e');
     }
     return null;
@@ -170,7 +163,6 @@ class DatabaseService {
       );
       if (res.statusCode == 200) return jsonDecode(res.body)['id'];
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('insertDoctor error: $e');
     }
     return 0;
@@ -190,7 +182,6 @@ class DatabaseService {
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('updateDoctor error: $e');
     }
   }
@@ -199,7 +190,6 @@ class DatabaseService {
     try {
       await http.delete(Uri.parse('$_baseUrl/doctors/$id'));
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('deleteDoctor error: $e');
     }
   }
@@ -220,7 +210,6 @@ class DatabaseService {
         )).toList();
       }
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('getPatients error: $e');
     }
     return [];
@@ -241,7 +230,6 @@ class DatabaseService {
         );
       }
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('getPatientById error: $e');
     }
     return null;
@@ -262,7 +250,6 @@ class DatabaseService {
       );
       if (res.statusCode == 200) return jsonDecode(res.body)['id'];
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('insertPatient error: $e');
     }
     return 0;
@@ -283,7 +270,6 @@ class DatabaseService {
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('updatePatient error: $e');
     }
   }
@@ -292,7 +278,6 @@ class DatabaseService {
     try {
       await http.delete(Uri.parse('$_baseUrl/patients/$id'));
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('deletePatient error: $e');
     }
   }
@@ -314,7 +299,6 @@ class DatabaseService {
         )).toList();
       }
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('getMeasurements error: $e');
     }
     return [];
@@ -335,7 +319,6 @@ class DatabaseService {
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('insertMeasurement error: $e');
     }
   }
@@ -355,7 +338,6 @@ class DatabaseService {
         )).toList();
       }
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('getMoodEntries error: $e');
     }
     return [];
@@ -375,7 +357,6 @@ class DatabaseService {
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('insertMoodEntry error: $e');
     }
   }
@@ -384,7 +365,6 @@ class DatabaseService {
     try {
       await http.delete(Uri.parse('$_baseUrl/mood/$id'));
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('deleteMoodEntry error: $e');
     }
   }
@@ -394,7 +374,6 @@ class DatabaseService {
       final res = await http.get(Uri.parse('$_baseUrl/notes/$id'));
       if (res.statusCode == 200) return List<Map<String, dynamic>>.from(jsonDecode(res.body));
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('getNotes error: $e');
     }
     return [];
@@ -413,7 +392,6 @@ class DatabaseService {
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('insertNote error: $e');
     }
   }
@@ -435,7 +413,6 @@ class DatabaseService {
         )).toList();
       }
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('getAppointments error: $e');
     }
     return [];
@@ -457,7 +434,6 @@ class DatabaseService {
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('insertAppointment error: $e');
     }
   }
@@ -466,7 +442,6 @@ class DatabaseService {
     try {
       await http.delete(Uri.parse('$_baseUrl/appointments/$id'));
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('deleteAppointment error: $e');
     }
   }
@@ -479,7 +454,6 @@ class DatabaseService {
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('updateAppointmentStatus error: $e');
     }
   }
@@ -489,7 +463,6 @@ class DatabaseService {
       final res = await http.get(Uri.parse('$_baseUrl/schedule/${Uri.encodeComponent(doctorName)}'));
       if (res.statusCode == 200) return List<Map<String, dynamic>>.from(jsonDecode(res.body));
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('getDoctorSchedule error: $e');
     }
     return [];
@@ -509,7 +482,6 @@ class DatabaseService {
         )).toList();
       }
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('getQuestionnaireResults error: $e');
     }
     return [];
@@ -528,7 +500,6 @@ class DatabaseService {
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('insertQuestionnaireResult error: $e');
     }
   }
@@ -537,7 +508,6 @@ class DatabaseService {
     try {
       await http.delete(Uri.parse('$_baseUrl/questionnaires/$id'));
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('deleteQuestionnaireResult error: $e');
     }
   }
@@ -547,7 +517,6 @@ class DatabaseService {
       final res = await http.get(Uri.parse('$_baseUrl/hospitalizations/$id'));
       if (res.statusCode == 200) return List<Map<String, dynamic>>.from(jsonDecode(res.body));
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('getHospitalizations error: $e');
     }
     return [];
@@ -567,7 +536,6 @@ class DatabaseService {
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('insertHospitalization error: $e');
     }
   }
@@ -586,7 +554,6 @@ class DatabaseService {
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('sendReminder error: $e');
     }
   }
@@ -596,7 +563,6 @@ class DatabaseService {
       final res = await http.get(Uri.parse('$_baseUrl/reminders/unread/$patientId'));
       if (res.statusCode == 200) return List<Map<String, dynamic>>.from(jsonDecode(res.body));
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('getUnreadReminders error: $e');
     }
     return [];
@@ -606,7 +572,6 @@ class DatabaseService {
     try {
       await http.put(Uri.parse('$_baseUrl/reminders/read/$id'));
     } catch (e) {
-      // ignore: avoid_print
       debugPrint('markReminderAsRead error: $e');
     }
   }
