@@ -201,12 +201,13 @@ class DatabaseService {
       if (res.statusCode == 200) {
         final List d = jsonDecode(res.body);
         return d.map((i) => Patient(
-          id: i['id'],
-          name: i['name'],
-          birthDate: i['birthDate'],
-          photoPath: i['photoPath'],
-          relativeContact: i['relativeContact'],
-          doctorId: i['doctorId']
+          id: i['id'], 
+          name: i['name'], 
+          birthDate: i['birthDate'], 
+          photoPath: i['photoPath'], 
+          relativeContact: i['relativeContact'], 
+          doctorId: i['doctorId'],
+          diagnosis: i['diagnosis']
         )).toList();
       }
     } catch (e) {
@@ -221,12 +222,13 @@ class DatabaseService {
       if (res.statusCode == 200) {
         final i = jsonDecode(res.body);
         return Patient(
-          id: i['id'],
-          name: i['name'],
-          birthDate: i['birthDate'],
-          photoPath: i['photoPath'],
-          relativeContact: i['relativeContact'],
-          doctorId: i['doctorId']
+          id: i['id'], 
+          name: i['name'], 
+          birthDate: i['birthDate'], 
+          photoPath: i['photoPath'], 
+          relativeContact: i['relativeContact'], 
+          doctorId: i['doctorId'],
+          diagnosis: i['diagnosis']
         );
       }
     } catch (e) {
@@ -238,15 +240,16 @@ class DatabaseService {
   Future<int> insertPatient(Patient p) async {
     try {
       final res = await http.post(
-        Uri.parse('$_baseUrl/patients'),
+        Uri.parse('$_baseUrl/patients'), 
         body: jsonEncode({
-          'name': p.name,
-          'birthDate': p.birthDate,
-          'photoPath': p.photoPath,
-          'relativeContact': p.relativeContact,
-          'doctorId': p.doctorId
-        }),
-        headers: {'Content-Type': 'application/json'},
+          'name': p.name, 
+          'birthDate': p.birthDate, 
+          'photoPath': p.photoPath, 
+          'relativeContact': p.relativeContact, 
+          'doctorId': p.doctorId,
+          'diagnosis': p.diagnosis
+        }), 
+        headers: {'Content-Type': 'application/json'}
       );
       if (res.statusCode == 200) return jsonDecode(res.body)['id'];
     } catch (e) {
@@ -258,16 +261,17 @@ class DatabaseService {
   Future<void> updatePatient(Patient p) async {
     try {
       await http.put(
-        Uri.parse('$_baseUrl/patients'),
+        Uri.parse('$_baseUrl/patients'), 
         body: jsonEncode({
-          'id': p.id,
-          'name': p.name,
-          'birthDate': p.birthDate,
-          'photoPath': p.photoPath,
-          'relativeContact': p.relativeContact,
-          'doctorId': p.doctorId
-        }),
-        headers: {'Content-Type': 'application/json'},
+          'id': p.id, 
+          'name': p.name, 
+          'birthDate': p.birthDate, 
+          'photoPath': p.photoPath, 
+          'relativeContact': p.relativeContact, 
+          'doctorId': p.doctorId,
+          'diagnosis': p.diagnosis
+        }), 
+        headers: {'Content-Type': 'application/json'}
       );
     } catch (e) {
       debugPrint('updatePatient error: $e');

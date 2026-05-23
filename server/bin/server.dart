@@ -150,22 +150,22 @@ void main() async {
 
   // --- PATIENTS ---
   router.get('/patients', (Request req) async {
-    final res = await conn.execute('SELECT id, name, birth_date, photo_path, relative_contact, doctor_id FROM patients ORDER BY id');
-    return Response.ok(jsonEncode(res.map((r) => {'id': r[0], 'name': r[1], 'birthDate': r[2], 'photoPath': r[3], 'relativeContact': r[4], 'doctorId': r[5]}).toList()));
+    final res = await conn.execute('SELECT id, name, birth_date, photo_path, relative_contact, doctor_id, diagnosis FROM patients ORDER BY id');
+    return Response.ok(jsonEncode(res.map((r) => {'id': r[0], 'name': r[1], 'birthDate': r[2], 'photoPath': r[3], 'relativeContact': r[4], 'doctorId': r[5], 'diagnosis': r[6]}).toList()));
   });
 
   router.get('/patients/<id>', (Request req, String id) async {
-    final res = await conn.execute(Sql.named('SELECT id, name, birth_date, photo_path, relative_contact, doctor_id FROM patients WHERE id = @id'), parameters: {'id': int.parse(id)});
+    final res = await conn.execute(Sql.named('SELECT id, name, birth_date, photo_path, relative_contact, doctor_id, diagnosis FROM patients WHERE id = @id'), parameters: {'id': int.parse(id)});
     if (res.isEmpty) return Response.notFound('Not found');
     final r = res.first;
-    return Response.ok(jsonEncode({'id': r[0], 'name': r[1], 'birthDate': r[2], 'photoPath': r[3], 'relativeContact': r[4], 'doctorId': r[5]}));
+    return Response.ok(jsonEncode({'id': r[0], 'name': r[1], 'birthDate': r[2], 'photoPath': r[3], 'relativeContact': r[4], 'doctorId': r[5], 'diagnosis': r[6]}));
   });
 
   router.post('/patients', (Request req) async {
     final p = jsonDecode(await req.readAsString());
     final res = await conn.execute(
-      Sql.named('INSERT INTO patients (name, birth_date, photo_path, relative_contact, doctor_id) VALUES (@n, @b, @ph, @r, @d) RETURNING id'),
-      parameters: {'n': p['name'], 'b': p['birthDate'], 'ph': p['photoPath'], 'r': p['relativeContact'], 'd': p['doctorId']},
+      Sql.named('INSERT INTO patients (name, birth_date, photo_path, relative_contact, doctor_id, diagnosis) VALUES (@n, @b, @ph, @r, @d, @diag) RETURNING id'),
+      parameters: {'n': p['name'], 'b': p['birthDate'], 'ph': p['photoPath'], 'r': p['relativeContact'], 'd': p['doctorId'], 'diag': p['diagnosis']},
     );
     return Response.ok(jsonEncode({'id': res.first[0]}));
   });
@@ -173,8 +173,8 @@ void main() async {
   router.put('/patients', (Request req) async {
     final p = jsonDecode(await req.readAsString());
     await conn.execute(
-      Sql.named('UPDATE patients SET name=@n, birth_date=@b, photo_path=@ph, relative_contact=@r, doctor_id=@d WHERE id=@id'),
-      parameters: {'id': p['id'], 'n': p['name'], 'b': p['birthDate'], 'ph': p['photoPath'], 'r': p['relativeContact'], 'd': p['doctorId']},
+      Sql.named('UPDATE patients SET name=@n, birth_date=@b, photo_path=@ph, relative_contact=@r, doctor_id=@d, diagnosis=@diag WHERE id=@id'),
+      parameters: {'id': p['id'], 'n': p['name'], 'b': p['birthDate'], 'ph': p['photoPath'], 'r': p['relativeContact'], 'd': p['doctorId'], 'diag': p['diagnosis']},
     );
     return Response.ok('Updated');
   });
@@ -347,9 +347,14 @@ Future<void> _setupDatabase() async {
       birth_date TEXT,
       photo_path TEXT,
       relative_contact TEXT,
-      doctor_id INTEGER REFERENCES doctors(id) ON DELETE SET NULL
+      doctor_id INTEGER REFERENCES doctors(id) ON DELETE SET NULL,
+      diagnosis TEXT
     )
   ''');
+
+  try {
+    await conn.execute("ALTER TABLE patients ADD COLUMN IF NOT EXISTS diagnosis TEXT");
+  } catch (e) {}
 
   // 3. Diagnoses
   await conn.execute('''

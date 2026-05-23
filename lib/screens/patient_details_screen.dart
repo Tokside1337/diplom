@@ -660,6 +660,54 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     }
   }
 
+  Future<void> _updateDiagnosis() async {
+    final controller = TextEditingController(text: widget.patient.diagnosis);
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Установить диагноз'),
+        content: TextField(
+          controller: controller,
+          maxLines: 3,
+          decoration: InputDecoration(
+            hintText: 'Введите клинический диагноз...',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Сохранить'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null) {
+      final updatedPatient = Patient(
+        id: widget.patient.id,
+        name: widget.patient.name,
+        birthDate: widget.patient.birthDate,
+        photoPath: widget.patient.photoPath,
+        relativeContact: widget.patient.relativeContact,
+        doctorId: widget.patient.doctorId,
+        diagnosis: result,
+      );
+
+      await _dbService.updatePatient(updatedPatient);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Диагноз обновлен')));
+        // Перезагружаем страницу или обновляем локальный объект
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => PatientDetailsScreen(patient: updatedPatient, isPatientView: false, doctor: widget.doctor)),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.isPatientView) return _buildPatientProfile();
@@ -727,6 +775,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   }
 
   Widget _buildDoctorView() {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: Text('Пациент: ${_formatNameShort(widget.patient.name)}'),
@@ -745,6 +794,18 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _buildSectionTitle('Клинический диагноз'),
+              Card(
+                elevation: 0,
+                color: colorScheme.secondaryContainer.withValues(alpha: 0.3),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: colorScheme.secondary.withValues(alpha: 0.2))),
+                child: ListTile(
+                  title: Text(widget.patient.diagnosis ?? 'Диагноз не установлен', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  trailing: const Icon(Icons.edit_note_rounded),
+                  onTap: _updateDiagnosis,
+                ),
+              ),
+              const SizedBox(height: 24),
               _buildSectionTitle('Аналитика ИИ и Прогноз'),
               _buildAICard(centeredTitle: true),
               const SizedBox(height: 24),
@@ -959,7 +1020,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                     ),
                     child: ListTile(
                       title: Text(app.title, style: const TextStyle(fontWeight: FontWeight.bold)), 
-                      subtitle: Text('${app.doctor} • Каб. ${app.room}'),
+                      subtitle: Text('${DateFormat('dd.MM.yyyy HH:mm').format(DateTime.parse(app.time))} • ${app.doctor} • Каб. ${app.room}'),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
