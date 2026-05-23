@@ -10,7 +10,7 @@ const String _dbHost = 'localhost';
 const int _dbPort = 5432;
 const String _dbName = 'rehab_db';
 const String _dbUser = 'postgres';
-const String _dbPass = '1337';
+const String _dbPass = '12345';
 const String _aiApiKey = 'AIzaSyDAz3E57uUFa1wGarxoBa0GMPAdP5bbq00';
 
 late Connection conn;
@@ -40,7 +40,6 @@ void main() async {
 
       String contextData = '';
       if (patientId > 0) {
-        // Fetch patient info
         final pRes = await conn.execute(Sql.named('SELECT name, birth_date FROM patients WHERE id = @id'), parameters: {'id': patientId});
         if (pRes.isNotEmpty) {
           final p = pRes.first;
@@ -50,21 +49,21 @@ void main() async {
           contextData = 'Контекст пациента:\n'
               'Имя: ${p[0]}\n'
               'Дата рождения: ${p[1]}\n'
-              'Последние замеры давления: ${mRes.map((m) => "${(m[0] as num).toInt()}/${(m[1] as num).toInt()}").join(", ")}\n'
+              'Последние замеры давления: ${mRes.map((m) => "${_toDouble(m[0]) ?? 0.0}/${_toDouble(m[1]) ?? 0.0}").join(", ")}\n'
               'Последние записи настроения: ${moodRes.map((m) => m[0]).join("; ")}\n';
         }
       }
 
       final systemPrompt = isDoctor ? _doctorPrompt : _patientPrompt;
       final model = GenerativeModel(
-        model: 'gemini-3.1-flash-lite', // Используем актуальный тег модели
+        model: 'gemini-1.5-flash',
         apiKey: _aiApiKey,
         systemInstruction: Content.system(systemPrompt),
       );
 
       final prompt = contextData.isNotEmpty ? '$contextData\n\nЗапрос: $message' : message;
       final response = await model.generateContent([Content.text(prompt)]);
-      
+
       return Response.ok(jsonEncode({'text': response.text ?? 'Не удалось получить ответ.'}));
     } catch (e) {
       stderr.writeln('AI Chat Error: $e');
@@ -151,14 +150,14 @@ void main() async {
   // --- PATIENTS ---
   router.get('/patients', (Request req) async {
     final res = await conn.execute('SELECT id, name, birth_date, photo_path, relative_contact, doctor_id, diagnosis FROM patients ORDER BY id');
-    return Response.ok(jsonEncode(res.map((r) => {'id': r[0], 'name': r[1], 'birthDate': r[2], 'photoPath': r[3], 'relativeContact': r[4], 'doctorId': r[5], 'diagnosis': r[6]}).toList()));
+    return Response.ok(jsonEncode(res.map((r) => {'id': r[0], 'name': r[1], 'birthDate': r[2], 'photoPath': r[3], 'relativeContact': r[4], 'doctorId': r[5], 'diagnosis': r[6]}).toList(), toEncodable: _jsonEncodeDateTime));
   });
 
   router.get('/patients/<id>', (Request req, String id) async {
     final res = await conn.execute(Sql.named('SELECT id, name, birth_date, photo_path, relative_contact, doctor_id, diagnosis FROM patients WHERE id = @id'), parameters: {'id': int.parse(id)});
     if (res.isEmpty) return Response.notFound('Not found');
     final r = res.first;
-    return Response.ok(jsonEncode({'id': r[0], 'name': r[1], 'birthDate': r[2], 'photoPath': r[3], 'relativeContact': r[4], 'doctorId': r[5], 'diagnosis': r[6]}));
+    return Response.ok(jsonEncode({'id': r[0], 'name': r[1], 'birthDate': r[2], 'photoPath': r[3], 'relativeContact': r[4], 'doctorId': r[5], 'diagnosis': r[6]}, toEncodable: _jsonEncodeDateTime));
   });
 
   router.post('/patients', (Request req) async {
@@ -184,52 +183,60 @@ void main() async {
     return Response.ok('Deleted');
   });
 
-  // --- MEASUREMENTS, MOOD, NOTES, APPOINTMENTS, ETC. ---
+  // --- MEASUREMENTS ---
   router.get('/measurements/<id>', (Request req, String id) async {
     final res = await conn.execute(Sql.named('SELECT id, patient_id, pressure_systolic, pressure_diastolic, pulse, pain_level, timestamp FROM measurements WHERE patient_id = @id ORDER BY timestamp ASC'), parameters: {'id': int.parse(id)});
-    return Response.ok(jsonEncode(res.map((r) => {'id': r[0], 'patientId': r[1], 'pressureSystolic': r[2], 'pressureDiastolic': r[3], 'pulse': r[4], 'painLevel': r[5], 'timestamp': r[6]}).toList()));
+    return Response.ok(jsonEncode(res.map((r) => {
+      'id': r[0],
+      'patientId': r[1],
+      'pressureSystolic': _toDouble(r[2]),
+      'pressureDiastolic': _toDouble(r[3]),
+      'pulse': _toInt(r[4]),
+      'painLevel': _toInt(r[5]),
+      'timestamp': r[6]
+    }).toList(), toEncodable: _jsonEncodeDateTime));
   });
 
   router.post('/measurements', (Request req) async {
     final m = jsonDecode(await req.readAsString());
-    await conn.execute(Sql.named('INSERT INTO measurements (patient_id, pressure_systolic, pressure_diastolic, pulse, pain_level, timestamp) VALUES (@pId, @sys, @dia, @p, @pl, @ts)'), 
-      parameters: {'pId': m['patientId'], 'sys': m['pressureSystolic'], 'dia': m['pressureDiastolic'], 'p': m['pulse'], 'pl': m['painLevel'], 'ts': m['timestamp']});
+    await conn.execute(Sql.named('INSERT INTO measurements (patient_id, pressure_systolic, pressure_diastolic, pulse, pain_level, timestamp) VALUES (@pId, @sys, @dia, @p, @pl, @ts)'),
+        parameters: {'pId': m['patientId'], 'sys': m['pressureSystolic'], 'dia': m['pressureDiastolic'], 'p': m['pulse'], 'pl': m['painLevel'], 'ts': m['timestamp']});
     return Response.ok('Saved');
   });
 
   router.get('/mood/<id>', (Request req, String id) async {
     final res = await conn.execute(Sql.named('SELECT id, patient_id, score, comment, timestamp, sentiment FROM mood_entries WHERE patient_id = @id ORDER BY timestamp ASC'), parameters: {'id': int.parse(id)});
-    return Response.ok(jsonEncode(res.map((r) => {'id': r[0], 'patientId': r[1], 'score': r[2], 'comment': r[3], 'timestamp': r[4], 'sentiment': r[5]}).toList()));
+    return Response.ok(jsonEncode(res.map((r) => {'id': r[0], 'patientId': r[1], 'score': r[2], 'comment': r[3], 'timestamp': r[4], 'sentiment': r[5]}).toList(), toEncodable: _jsonEncodeDateTime));
   });
 
   router.post('/mood', (Request req) async {
     final m = jsonDecode(await req.readAsString());
     await conn.execute(Sql.named('INSERT INTO mood_entries (patient_id, score, comment, timestamp, sentiment) VALUES (@pId, @s, @c, @ts, @sent)'),
-      parameters: {'pId': m['patientId'], 's': m['score'], 'c': m['comment'], 'ts': m['timestamp'], 'sent': m['sentiment']});
+        parameters: {'pId': m['patientId'], 's': m['score'], 'c': m['comment'], 'ts': m['timestamp'], 'sent': m['sentiment']});
     return Response.ok('Saved');
   });
 
   router.get('/notes/<id>', (Request req, String id) async {
     final res = await conn.execute(Sql.named('SELECT author, content, timestamp FROM medical_notes WHERE patient_id = @id ORDER BY timestamp DESC'), parameters: {'id': int.parse(id)});
-    return Response.ok(jsonEncode(res.map((r) => {'author': r[0], 'content': r[1], 'timestamp': r[2]}).toList()));
+    return Response.ok(jsonEncode(res.map((r) => {'author': r[0], 'content': r[1], 'timestamp': r[2]}).toList(), toEncodable: _jsonEncodeDateTime));
   });
 
   router.post('/notes', (Request req) async {
     final n = jsonDecode(await req.readAsString());
     await conn.execute(Sql.named('INSERT INTO medical_notes (patient_id, author, content, timestamp) VALUES (@pId, @a, @c, @ts)'),
-      parameters: {'pId': n['patientId'], 'a': n['author'], 'c': n['content'], 'ts': n['timestamp']});
+        parameters: {'pId': n['patientId'], 'a': n['author'], 'c': n['content'], 'ts': n['timestamp']});
     return Response.ok('Saved');
   });
 
   router.get('/appointments/<id>', (Request req, String id) async {
     final res = await conn.execute(Sql.named('SELECT id, patient_id, type, title, time, room, doctor, status FROM appointments WHERE patient_id = @id ORDER BY time ASC'), parameters: {'id': int.parse(id)});
-    return Response.ok(jsonEncode(res.map((r) => {'id': r[0], 'patientId': r[1], 'type': r[2], 'title': r[3], 'time': r[4], 'room': r[5], 'doctor': r[6], 'status': r[7]}).toList()));
+    return Response.ok(jsonEncode(res.map((r) => {'id': r[0], 'patientId': r[1], 'type': r[2], 'title': r[3], 'time': r[4], 'room': r[5], 'doctor': r[6], 'status': r[7]}).toList(), toEncodable: _jsonEncodeDateTime));
   });
 
   router.post('/appointments', (Request req) async {
     final a = jsonDecode(await req.readAsString());
     await conn.execute(Sql.named('INSERT INTO appointments (patient_id, type, title, time, room, doctor, status) VALUES (@pId, @ty, @tl, @tm, @r, @d, @s)'),
-      parameters: {'pId': a['patientId'], 'ty': a['type'], 'tl': a['title'], 'tm': a['time'], 'r': a['room'], 'd': a['doctor'], 's': a['status']});
+        parameters: {'pId': a['patientId'], 'ty': a['type'], 'tl': a['title'], 'tm': a['time'], 'r': a['room'], 'd': a['doctor'], 's': a['status']});
     return Response.ok('Saved');
   });
 
@@ -261,7 +268,7 @@ void main() async {
     );
     return Response.ok(jsonEncode(res.map((r) => {
       'id': r[0], 'type': r[1], 'title': r[2], 'time': r[3], 'room': r[4], 'patient_name': r[5], 'status': r[6]
-    }).toList()));
+    }).toList(), toEncodable: _jsonEncodeDateTime));
   });
 
   // --- REMINDERS ---
@@ -279,7 +286,7 @@ void main() async {
       Sql.named('SELECT id, doctor_id, message, timestamp FROM reminders WHERE patient_id = @id AND is_read = FALSE'),
       parameters: {'id': int.parse(id)},
     );
-    return Response.ok(jsonEncode(res.map((r) => {'id': r[0], 'doctor_id': r[1], 'message': r[2], 'timestamp': r[3]}).toList()));
+    return Response.ok(jsonEncode(res.map((r) => {'id': r[0], 'doctor_id': r[1], 'message': r[2], 'timestamp': r[3]}).toList(), toEncodable: _jsonEncodeDateTime));
   });
 
   router.put('/reminders/read/<id>', (Request req, String id) async {
@@ -300,31 +307,51 @@ void main() async {
 
   router.get('/questionnaires/<id>', (Request req, String id) async {
     final res = await conn.execute(Sql.named('SELECT id, patient_id, title, total_score, date FROM questionnaire_results WHERE patient_id = @id ORDER BY date DESC'), parameters: {'id': int.parse(id)});
-    return Response.ok(jsonEncode(res.map((r) => {'id': r[0], 'patientId': r[1], 'title': r[2], 'totalScore': r[3], 'date': r[4]}).toList()));
+    return Response.ok(jsonEncode(res.map((r) => {'id': r[0], 'patientId': r[1], 'title': r[2], 'totalScore': r[3], 'date': r[4]}).toList(), toEncodable: _jsonEncodeDateTime));
   });
 
   router.post('/questionnaires', (Request req) async {
     final q = jsonDecode(await req.readAsString());
     await conn.execute(Sql.named('INSERT INTO questionnaire_results (patient_id, title, total_score, date) VALUES (@pId, @t, @s, @d)'),
-      parameters: {'pId': q['patientId'], 't': q['title'], 's': q['totalScore'], 'd': q['date']});
+        parameters: {'pId': q['patientId'], 't': q['title'], 's': q['totalScore'], 'd': q['date']});
     return Response.ok('Saved');
   });
 
   router.get('/hospitalizations/<id>', (Request req, String id) async {
     final res = await conn.execute(Sql.named('SELECT admission_date, discharge_date, reason, department FROM hospitalizations WHERE patient_id = @id ORDER BY admission_date DESC'), parameters: {'id': int.parse(id)});
-    return Response.ok(jsonEncode(res.map((r) => {'admission_date': r[0], 'discharge_date': r[1], 'reason': r[2], 'department': r[3]}).toList()));
+    return Response.ok(jsonEncode(res.map((r) => {'admission_date': r[0], 'discharge_date': r[1], 'reason': r[2], 'department': r[3]}).toList(), toEncodable: _jsonEncodeDateTime));
   });
 
   router.post('/hospitalizations', (Request req) async {
     final h = jsonDecode(await req.readAsString());
     await conn.execute(Sql.named('INSERT INTO hospitalizations (patient_id, admission_date, discharge_date, reason, department) VALUES (@pId, @a, @d, @r, @dep)'),
-      parameters: {'pId': h['patientId'], 'a': h['admission_date'], 'd': h['discharge_date'], 'r': h['reason'], 'dep': h['department']});
+        parameters: {'pId': h['patientId'], 'a': h['admission_date'], 'd': h['discharge_date'], 'r': h['reason'], 'dep': h['department']});
     return Response.ok('Saved');
   });
 
   final handler = Pipeline().addMiddleware(logRequests()).addMiddleware(_corsMiddleware).addHandler(router.call);
   final server = await serve(handler, InternetAddress.anyIPv4, 8080);
   stdout.writeln('API сервер запущен на: http://${server.address.address}:${server.port}');
+}
+
+/// Вспомогательная функция для сериализации DateTime в JSON
+Object? _jsonEncodeDateTime(Object? item) {
+  if (item is DateTime) return item.toIso8601String();
+  return item;
+}
+
+/// Безопасное преобразование в double
+double? _toDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value.toString());
+}
+
+/// Безопасное преобразование в int
+int? _toInt(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  return int.tryParse(value.toString());
 }
 
 Future<void> _setupDatabase() async {
