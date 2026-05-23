@@ -22,6 +22,7 @@ void main() async {
       settings: const ConnectionSettings(sslMode: SslMode.disable),
     );
     stdout.writeln('Сервер подключен к PostgreSQL');
+    await _setupDatabase();
   } catch (e) {
     stderr.writeln('Ошибка БД: $e');
     return;
@@ -324,6 +325,156 @@ void main() async {
   final handler = Pipeline().addMiddleware(logRequests()).addMiddleware(_corsMiddleware).addHandler(router.call);
   final server = await serve(handler, InternetAddress.anyIPv4, 8080);
   stdout.writeln('API сервер запущен на: http://${server.address.address}:${server.port}');
+}
+
+Future<void> _setupDatabase() async {
+  // 1. Doctors
+  await conn.execute('''
+    CREATE TABLE IF NOT EXISTS doctors(
+      id SERIAL PRIMARY KEY,
+      name TEXT,
+      specialization TEXT,
+      phone TEXT,
+      cabinet TEXT
+    )
+  ''');
+
+  // 2. Patients
+  await conn.execute('''
+    CREATE TABLE IF NOT EXISTS patients(
+      id SERIAL PRIMARY KEY,
+      name TEXT,
+      birth_date TEXT,
+      photo_path TEXT,
+      relative_contact TEXT,
+      doctor_id INTEGER REFERENCES doctors(id) ON DELETE SET NULL
+    )
+  ''');
+
+  // 3. Diagnoses
+  await conn.execute('''
+    CREATE TABLE IF NOT EXISTS diagnoses(
+      id SERIAL PRIMARY KEY,
+      patient_id INTEGER REFERENCES patients(id) ON DELETE CASCADE,
+      description TEXT,
+      date TEXT
+    )
+  ''');
+
+  // 4. Hospitalizations
+  await conn.execute('''
+    CREATE TABLE IF NOT EXISTS hospitalizations(
+      id SERIAL PRIMARY KEY,
+      patient_id INTEGER REFERENCES patients(id) ON DELETE CASCADE,
+      admission_date TEXT,
+      discharge_date TEXT,
+      reason TEXT,
+      department TEXT
+    )
+  ''');
+
+  // 5. Questionnaire results
+  await conn.execute('''
+    CREATE TABLE IF NOT EXISTS questionnaire_results(
+      id SERIAL PRIMARY KEY,
+      patient_id INTEGER REFERENCES patients(id) ON DELETE CASCADE,
+      title TEXT,
+      total_score INTEGER,
+      date TEXT
+    )
+  ''');
+
+  // 6. Appointments
+  await conn.execute('''
+    CREATE TABLE IF NOT EXISTS appointments(
+      id SERIAL PRIMARY KEY,
+      patient_id INTEGER REFERENCES patients(id) ON DELETE CASCADE,
+      type TEXT,
+      title TEXT,
+      time TEXT,
+      room TEXT,
+      doctor TEXT,
+      status TEXT DEFAULT 'pending'
+    )
+  ''');
+
+  // 7. Measurements
+  await conn.execute('''
+    CREATE TABLE IF NOT EXISTS measurements(
+      id SERIAL PRIMARY KEY,
+      patient_id INTEGER REFERENCES patients(id) ON DELETE CASCADE,
+      pressure_systolic REAL,
+      pressure_diastolic REAL,
+      pulse INTEGER,
+      pain_level INTEGER,
+      timestamp TEXT
+    )
+  ''');
+
+  // 8. Mood Entries
+  await conn.execute('''
+    CREATE TABLE IF NOT EXISTS mood_entries(
+      id SERIAL PRIMARY KEY,
+      patient_id INTEGER REFERENCES patients(id) ON DELETE CASCADE,
+      score INTEGER,
+      comment TEXT,
+      timestamp TEXT,
+      sentiment TEXT
+    )
+  ''');
+
+  // 9. Medical Notes
+  await conn.execute('''
+    CREATE TABLE IF NOT EXISTS medical_notes(
+      id SERIAL PRIMARY KEY,
+      patient_id INTEGER REFERENCES patients(id) ON DELETE CASCADE,
+      author TEXT,
+      content TEXT,
+      timestamp TEXT
+    )
+  ''');
+
+  // 10. Users
+  await conn.execute('''
+    CREATE TABLE IF NOT EXISTS users(
+      id SERIAL PRIMARY KEY,
+      login TEXT UNIQUE,
+      password TEXT,
+      role TEXT,
+      patient_id INTEGER REFERENCES patients(id) ON DELETE SET NULL,
+      doctor_id INTEGER REFERENCES doctors(id) ON DELETE SET NULL
+    )
+  ''');
+
+  // 11. Reminders
+  await conn.execute('''
+    CREATE TABLE IF NOT EXISTS reminders(
+      id SERIAL PRIMARY KEY,
+      patient_id INTEGER REFERENCES patients(id) ON DELETE CASCADE,
+      doctor_id INTEGER REFERENCES doctors(id) ON DELETE CASCADE,
+      message TEXT,
+      is_read BOOLEAN DEFAULT FALSE,
+      timestamp TEXT
+    )
+  ''');
+
+  // Default Admin User
+  final adminCheck = await conn.execute(
+    Sql.named('SELECT id FROM users WHERE login = @login'),
+    parameters: {'login': 'admin'},
+  );
+
+  if (adminCheck.isEmpty) {
+    await conn.execute(
+      Sql.named('INSERT INTO users (login, password, role) VALUES (@login, @password, @role)'),
+      parameters: {
+        'login': 'admin',
+        'password': '1337', // Default admin password
+        'role': 'admin',
+      },
+    );
+    stdout.writeln('Создан пользователь admin по умолчанию');
+  }
 }
 
 Middleware _corsMiddleware = (Handler innerHandler) {
