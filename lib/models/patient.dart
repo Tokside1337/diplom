@@ -4,8 +4,12 @@ class Patient {
   final String birthDate;
   final String? photoPath;
   final String relativeContact;
-  final int? doctorId; // New field for linked doctor
+  final int? doctorId;
   final String? diagnosis;
+  final String? contraindications;
+  final String? treatmentGoals;
+  final String? dynamics;
+  final String? finalRecommendations;
 
   Patient({
     this.id,
@@ -15,6 +19,10 @@ class Patient {
     required this.relativeContact,
     this.doctorId,
     this.diagnosis,
+    this.contraindications,
+    this.treatmentGoals,
+    this.dynamics,
+    this.finalRecommendations,
   });
 
   Map<String, dynamic> toMap() {
@@ -26,6 +34,10 @@ class Patient {
       'relativeContact': relativeContact,
       'doctor_id': doctorId,
       'diagnosis': diagnosis,
+      'contraindications': contraindications,
+      'treatment_goals': treatmentGoals,
+      'dynamics': dynamics,
+      'final_recommendations': finalRecommendations,
     };
   }
 
@@ -38,6 +50,10 @@ class Patient {
       relativeContact: map['relativeContact'],
       doctorId: map['doctor_id'],
       diagnosis: map['diagnosis'],
+      contraindications: map['contraindications'],
+      treatmentGoals: map['treatment_goals'],
+      dynamics: map['dynamics'],
+      finalRecommendations: map['final_recommendations'],
     );
   }
 }

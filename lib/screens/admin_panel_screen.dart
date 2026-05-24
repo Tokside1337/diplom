@@ -380,6 +380,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                       birthDate: birthDateController.text.trim(),
                       relativeContact: contactController.text.trim().isEmpty ? 'Не указан' : contactController.text.trim(),
                       doctorId: selectedDoctorId,
+                      diagnosis: patient?.diagnosis,
+                      contraindications: patient?.contraindications,
+                      treatmentGoals: patient?.treatmentGoals,
+                      dynamics: patient?.dynamics,
+                      finalRecommendations: patient?.finalRecommendations,
                     );
                     if (isEditing && (targetUser?.role == UserRole.patient || patient != null)) {
                       await _dbService.updatePatient(pat);

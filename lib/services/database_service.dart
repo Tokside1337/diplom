@@ -6,6 +6,7 @@ import 'package:diplom/models/patient.dart';
 import 'package:diplom/models/user.dart';
 import 'package:diplom/models/medical_models.dart';
 import 'package:diplom/models/doctor.dart';
+import 'package:diplom/models/emk_model.dart';
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
@@ -207,7 +208,11 @@ class DatabaseService {
           photoPath: i['photoPath'], 
           relativeContact: i['relativeContact'], 
           doctorId: i['doctorId'],
-          diagnosis: i['diagnosis']
+          diagnosis: i['diagnosis'],
+          contraindications: i['contraindications'],
+          treatmentGoals: i['treatmentGoals'],
+          dynamics: i['dynamics'],
+          finalRecommendations: i['finalRecommendations']
         )).toList();
       }
     } catch (e) {
@@ -228,7 +233,11 @@ class DatabaseService {
           photoPath: i['photoPath'], 
           relativeContact: i['relativeContact'], 
           doctorId: i['doctorId'],
-          diagnosis: i['diagnosis']
+          diagnosis: i['diagnosis'],
+          contraindications: i['contraindications'],
+          treatmentGoals: i['treatmentGoals'],
+          dynamics: i['dynamics'],
+          finalRecommendations: i['finalRecommendations']
         );
       }
     } catch (e) {
@@ -247,7 +256,11 @@ class DatabaseService {
           'photoPath': p.photoPath, 
           'relativeContact': p.relativeContact, 
           'doctorId': p.doctorId,
-          'diagnosis': p.diagnosis
+          'diagnosis': p.diagnosis,
+          'contraindications': p.contraindications,
+          'treatmentGoals': p.treatmentGoals,
+          'dynamics': p.dynamics,
+          'finalRecommendations': p.finalRecommendations
         }), 
         headers: {'Content-Type': 'application/json'}
       );
@@ -269,7 +282,11 @@ class DatabaseService {
           'photoPath': p.photoPath, 
           'relativeContact': p.relativeContact, 
           'doctorId': p.doctorId,
-          'diagnosis': p.diagnosis
+          'diagnosis': p.diagnosis,
+          'contraindications': p.contraindications,
+          'treatmentGoals': p.treatmentGoals,
+          'dynamics': p.dynamics,
+          'finalRecommendations': p.finalRecommendations
         }), 
         headers: {'Content-Type': 'application/json'}
       );
@@ -283,6 +300,40 @@ class DatabaseService {
       await http.delete(Uri.parse('$_baseUrl/patients/$id'));
     } catch (e) {
       debugPrint('deletePatient error: $e');
+    }
+  }
+
+  // --- EMK ---
+  Future<EMK?> getEMK(int patientId) async {
+    try {
+      final res = await http.get(Uri.parse('$_baseUrl/emk/$patientId'));
+      if (res.statusCode == 200) {
+        return EMK.fromMap(jsonDecode(res.body));
+      }
+    } catch (e) {
+      debugPrint('getEMK error: $e');
+    }
+    return null;
+  }
+
+  Future<void> saveEMK(EMK emk) async {
+    try {
+      final existing = await getEMK(emk.patientId);
+      if (existing == null) {
+        await http.post(
+          Uri.parse('$_baseUrl/emk'),
+          body: jsonEncode(emk.toMap()),
+          headers: {'Content-Type': 'application/json'},
+        );
+      } else {
+        await http.put(
+          Uri.parse('$_baseUrl/emk'),
+          body: jsonEncode(emk.toMap()),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+    } catch (e) {
+      debugPrint('saveEMK error: $e');
     }
   }
 

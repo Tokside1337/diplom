@@ -10,7 +10,7 @@ const String _dbHost = 'localhost';
 const int _dbPort = 5432;
 const String _dbName = 'rehab_db';
 const String _dbUser = 'postgres';
-const String _dbPass = '12345';
+const String _dbPass = '1337';
 const String _aiApiKey = 'AIzaSyDAz3E57uUFa1wGarxoBa0GMPAdP5bbq00';
 
 late Connection conn;
@@ -56,7 +56,7 @@ void main() async {
 
       final systemPrompt = isDoctor ? _doctorPrompt : _patientPrompt;
       final model = GenerativeModel(
-        model: 'gemini-1.5-flash',
+        model: 'gemini-3.1-flash-lite',
         apiKey: _aiApiKey,
         systemInstruction: Content.system(systemPrompt),
       );
@@ -149,22 +149,31 @@ void main() async {
 
   // --- PATIENTS ---
   router.get('/patients', (Request req) async {
-    final res = await conn.execute('SELECT id, name, birth_date, photo_path, relative_contact, doctor_id, diagnosis FROM patients ORDER BY id');
-    return Response.ok(jsonEncode(res.map((r) => {'id': r[0], 'name': r[1], 'birthDate': r[2], 'photoPath': r[3], 'relativeContact': r[4], 'doctorId': r[5], 'diagnosis': r[6]}).toList(), toEncodable: _jsonEncodeDateTime));
+    final res = await conn.execute('SELECT id, name, birth_date, photo_path, relative_contact, doctor_id, diagnosis, contraindications, treatment_goals, dynamics, final_recommendations FROM patients ORDER BY id');
+    return Response.ok(jsonEncode(res.map((r) => {
+      'id': r[0], 'name': r[1], 'birthDate': r[2], 'photoPath': r[3], 'relativeContact': r[4], 'doctorId': r[5], 
+      'diagnosis': r[6], 'contraindications': r[7], 'treatmentGoals': r[8], 'dynamics': r[9], 'finalRecommendations': r[10]
+    }).toList(), toEncodable: _jsonEncodeDateTime));
   });
 
   router.get('/patients/<id>', (Request req, String id) async {
-    final res = await conn.execute(Sql.named('SELECT id, name, birth_date, photo_path, relative_contact, doctor_id, diagnosis FROM patients WHERE id = @id'), parameters: {'id': int.parse(id)});
+    final res = await conn.execute(Sql.named('SELECT id, name, birth_date, photo_path, relative_contact, doctor_id, diagnosis, contraindications, treatment_goals, dynamics, final_recommendations FROM patients WHERE id = @id'), parameters: {'id': int.parse(id)});
     if (res.isEmpty) return Response.notFound('Not found');
     final r = res.first;
-    return Response.ok(jsonEncode({'id': r[0], 'name': r[1], 'birthDate': r[2], 'photoPath': r[3], 'relativeContact': r[4], 'doctorId': r[5], 'diagnosis': r[6]}, toEncodable: _jsonEncodeDateTime));
+    return Response.ok(jsonEncode({
+      'id': r[0], 'name': r[1], 'birthDate': r[2], 'photoPath': r[3], 'relativeContact': r[4], 'doctorId': r[5], 
+      'diagnosis': r[6], 'contraindications': r[7], 'treatmentGoals': r[8], 'dynamics': r[9], 'finalRecommendations': r[10]
+    }, toEncodable: _jsonEncodeDateTime));
   });
 
   router.post('/patients', (Request req) async {
     final p = jsonDecode(await req.readAsString());
     final res = await conn.execute(
-      Sql.named('INSERT INTO patients (name, birth_date, photo_path, relative_contact, doctor_id, diagnosis) VALUES (@n, @b, @ph, @r, @d, @diag) RETURNING id'),
-      parameters: {'n': p['name'], 'b': p['birthDate'], 'ph': p['photoPath'], 'r': p['relativeContact'], 'd': p['doctorId'], 'diag': p['diagnosis']},
+      Sql.named('INSERT INTO patients (name, birth_date, photo_path, relative_contact, doctor_id, diagnosis, contraindications, treatment_goals, dynamics, final_recommendations) VALUES (@n, @b, @ph, @r, @d, @diag, @cont, @goals, @dyn, @final) RETURNING id'),
+      parameters: {
+        'n': p['name'], 'b': p['birthDate'], 'ph': p['photoPath'], 'r': p['relativeContact'], 'd': p['doctorId'], 
+        'diag': p['diagnosis'], 'cont': p['contraindications'], 'goals': p['treatmentGoals'], 'dyn': p['dynamics'], 'final': p['finalRecommendations']
+      },
     );
     return Response.ok(jsonEncode({'id': res.first[0]}));
   });
@@ -172,8 +181,11 @@ void main() async {
   router.put('/patients', (Request req) async {
     final p = jsonDecode(await req.readAsString());
     await conn.execute(
-      Sql.named('UPDATE patients SET name=@n, birth_date=@b, photo_path=@ph, relative_contact=@r, doctor_id=@d, diagnosis=@diag WHERE id=@id'),
-      parameters: {'id': p['id'], 'n': p['name'], 'b': p['birthDate'], 'ph': p['photoPath'], 'r': p['relativeContact'], 'd': p['doctorId'], 'diag': p['diagnosis']},
+      Sql.named('UPDATE patients SET name=@n, birth_date=@b, photo_path=@ph, relative_contact=@r, doctor_id=@d, diagnosis=@diag, contraindications=@cont, treatment_goals=@goals, dynamics=@dyn, final_recommendations=@final WHERE id=@id'),
+      parameters: {
+        'id': p['id'], 'n': p['name'], 'b': p['birthDate'], 'ph': p['photoPath'], 'r': p['relativeContact'], 'd': p['doctorId'], 
+        'diag': p['diagnosis'], 'cont': p['contraindications'], 'goals': p['treatmentGoals'], 'dyn': p['dynamics'], 'final': p['finalRecommendations']
+      },
     );
     return Response.ok('Updated');
   });
@@ -329,6 +341,54 @@ void main() async {
     return Response.ok('Saved');
   });
 
+  // --- EMK ---
+  router.get('/emk/<patientId>', (Request req, String patientId) async {
+    final res = await conn.execute(
+      Sql.named('SELECT id, patient_id, status, diagnoses, contraindications, treatment_goals, daily_logs, stage_reviews, final_recommendations, created_at, updated_at FROM emk WHERE patient_id = @pId'),
+      parameters: {'pId': int.parse(patientId)},
+    );
+    if (res.isEmpty) return Response.notFound('Not found');
+    final r = res.first;
+    return Response.ok(jsonEncode({
+      'id': r[0], 'patient_id': r[1], 'status': r[2], 'diagnoses': r[3], 'contraindications': r[4], 
+      'treatment_goals': r[5], 'daily_logs': r[6], 'stage_reviews': r[7], 'final_recommendations': r[8],
+      'created_at': r[9], 'updated_at': r[10]
+    }));
+  });
+
+  router.post('/emk', (Request req) async {
+    final e = jsonDecode(await req.readAsString());
+    final res = await conn.execute(
+      Sql.named('''
+        INSERT INTO emk (patient_id, status, diagnoses, contraindications, treatment_goals, daily_logs, stage_reviews, final_recommendations, created_at, updated_at) 
+        VALUES (@pId, @s, @diag, @cont, @goals, @logs, @steps, @final, @cAt, @uAt) RETURNING id
+      '''),
+      parameters: {
+        'pId': e['patient_id'], 's': e['status'], 'diag': e['diagnoses'], 'cont': e['contraindications'], 
+        'goals': e['treatment_goals'], 'logs': e['daily_logs'], 'steps': e['stage_reviews'], 
+        'final': e['final_recommendations'], 'cAt': e['created_at'], 'uAt': e['updated_at']
+      },
+    );
+    return Response.ok(jsonEncode({'id': res.first[0]}));
+  });
+
+  router.put('/emk', (Request req) async {
+    final e = jsonDecode(await req.readAsString());
+    await conn.execute(
+      Sql.named('''
+        UPDATE emk SET status=@s, diagnoses=@diag, contraindications=@cont, treatment_goals=@goals, 
+        daily_logs=@logs, stage_reviews=@steps, final_recommendations=@final, updated_at=@uAt 
+        WHERE patient_id=@pId
+      '''),
+      parameters: {
+        'pId': e['patient_id'], 's': e['status'], 'diag': e['diagnoses'], 'cont': e['contraindications'], 
+        'goals': e['treatment_goals'], 'logs': e['daily_logs'], 'steps': e['stage_reviews'], 
+        'final': e['final_recommendations'], 'uAt': e['updated_at']
+      },
+    );
+    return Response.ok('Updated');
+  });
+
   final handler = Pipeline().addMiddleware(logRequests()).addMiddleware(_corsMiddleware).addHandler(router.call);
   final server = await serve(handler, InternetAddress.anyIPv4, 8080);
   stdout.writeln('API сервер запущен на: http://${server.address.address}:${server.port}');
@@ -378,10 +438,6 @@ Future<void> _setupDatabase() async {
       diagnosis TEXT
     )
   ''');
-
-  try {
-    await conn.execute("ALTER TABLE patients ADD COLUMN IF NOT EXISTS diagnosis TEXT");
-  } catch (e) {}
 
   // 3. Diagnoses
   await conn.execute('''
@@ -487,6 +543,23 @@ Future<void> _setupDatabase() async {
       message TEXT,
       is_read BOOLEAN DEFAULT FALSE,
       timestamp TEXT
+    )
+  ''');
+
+  // 12. EMK
+  await conn.execute('''
+    CREATE TABLE IF NOT EXISTS emk(
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      patient_id INTEGER REFERENCES patients(id) ON DELETE CASCADE,
+      status TEXT DEFAULT 'active',
+      diagnoses TEXT,
+      contraindications TEXT,
+      treatment_goals TEXT,
+      daily_logs TEXT,
+      stage_reviews TEXT,
+      final_recommendations TEXT,
+      created_at TEXT,
+      updated_at TEXT
     )
   ''');
 
