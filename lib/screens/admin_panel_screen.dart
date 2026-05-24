@@ -137,6 +137,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
     final cabinetController = TextEditingController();
     final birthDateController = TextEditingController();
     final contactController = TextEditingController();
+    final snilsController = TextEditingController();
+    final passportController = TextEditingController();
+    final patientPhoneController = TextEditingController();
+    final roomController = TextEditingController();
+    final buildingController = TextEditingController();
+    final arrivalPurposeController = TextEditingController();
+    final fundingSourceController = TextEditingController();
     int? selectedDoctorId;
 
     int? profileId = patient?.id ?? doctor?.id ?? (targetUser?.role == UserRole.doctor ? targetUser?.doctorId : targetUser?.patientId);
@@ -145,6 +152,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
       nameController.text = patient.name;
       birthDateController.text = patient.birthDate;
       contactController.text = patient.relativeContact;
+      snilsController.text = patient.snils ?? '';
+      passportController.text = patient.passportData ?? '';
+      patientPhoneController.text = patient.phone ?? '';
+      roomController.text = patient.roomNumber ?? '';
+      buildingController.text = patient.building ?? '';
+      arrivalPurposeController.text = patient.arrivalPurpose ?? '';
+      fundingSourceController.text = patient.fundingSource ?? '';
       selectedDoctorId = patient.doctorId;
     } else if (doctor != null) {
       nameController.text = doctor.name;
@@ -166,6 +180,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
           nameController.text = pat.name;
           birthDateController.text = pat.birthDate;
           contactController.text = pat.relativeContact;
+          snilsController.text = pat.snils ?? '';
+          passportController.text = pat.passportData ?? '';
+          patientPhoneController.text = pat.phone ?? '';
+          roomController.text = pat.roomNumber ?? '';
+          buildingController.text = pat.building ?? '';
           selectedDoctorId = pat.doctorId;
         }
       }
@@ -307,10 +326,76 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                         },
                       ),
                       const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildField(
+                              controller: snilsController,
+                              label: 'СНИЛС',
+                              icon: Icons.fingerprint_rounded,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildField(
+                              controller: patientPhoneController,
+                              label: 'Телефон',
+                              icon: Icons.phone_android_rounded,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _buildField(
+                        controller: passportController,
+                        label: 'Паспортные данные',
+                        icon: Icons.badge_outlined,
+                      ),
+                      const SizedBox(height: 12),
                       _buildField(
                         controller: contactController,
                         label: 'Контакт родственника',
                         icon: Icons.contact_phone_outlined,
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildField(
+                              controller: roomController,
+                              label: 'Номер',
+                              icon: Icons.meeting_room_rounded,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildField(
+                              controller: buildingController,
+                              label: 'Корпус',
+                              icon: Icons.apartment_rounded,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildField(
+                              controller: arrivalPurposeController,
+                              label: 'Цель заезда',
+                              icon: Icons.flag_outlined,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildField(
+                              controller: fundingSourceController,
+                              label: 'Источник',
+                              icon: Icons.source_outlined,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<int?>(
@@ -380,6 +465,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                       birthDate: birthDateController.text.trim(),
                       relativeContact: contactController.text.trim().isEmpty ? 'Не указан' : contactController.text.trim(),
                       doctorId: selectedDoctorId,
+                      snils: snilsController.text.trim(),
+                      passportData: passportController.text.trim(),
+                      phone: patientPhoneController.text.trim(),
+                      roomNumber: roomController.text.trim(),
+                      building: buildingController.text.trim(),
+                      arrivalPurpose: arrivalPurposeController.text.trim(),
+                      fundingSource: fundingSourceController.text.trim(),
                       diagnosis: patient?.diagnosis,
                       contraindications: patient?.contraindications,
                       treatmentGoals: patient?.treatmentGoals,

@@ -1,10 +1,68 @@
 class Patient {
   final int? id;
+  // 1. Общая информация
   final String name;
   final String birthDate;
-  final String? photoPath;
+  final String? gender;
+  final String? snils;
+  final String? passportData;
+  final String? phone;
   final String relativeContact;
+  final String? representativeData;
+  final String? photoPath;
+
+  // 2. Медицинская информация (на заезд)
+  final String? skkNumber;
+  final String? skkDate;
+  final String? issuedByLpu;
+  final String? mainDiagnosisMkb;
+  final String? secondaryDiagnosesMkb; 
+  final String? checkInExamination;
+  final String? healthGroup;
+  final String? dietTable;
+  final String? forbiddenProcedures;
+  final String? mobilityRegime;
+
+  // 3. Санаторно-курортная карта (расширенная)
+  final String? arrivalPurpose;
+  final String? fundingSource;
+  final String? sanatoriumProfile;
+  final String? plannedArrival;
+  final String? plannedDeparture;
+  final String? actualArrival;
+  final String? actualDeparture;
+  final String? roomNumber;
+  final String? building;
+  final String? floor;
+
+  // 4. Динамическое наблюдение
   final int? doctorId;
+  final int? bedDaysCount;
+
+  // 5. Немедицинские сущности
+  final String? roomCategory;
+  final String? dietType;
+  final String? specialNeeds;
+  final String? lfkGroup;
+  final String? culturalParticipation;
+  final String? voucherType;
+  final String? extraServices;
+  final String? companionData;
+
+  // 6. Статусы жизненного цикла
+  final String status;
+
+  // 7. Отчетные разрезы
+  final String? treatmentEfficiency;
+  final String? treatmentDurationCategory;
+  final String? benefitCategory;
+
+  // 8. Интеграционные маркеры
+  final String? egiszId;
+  final String? fssReferralId;
+  final bool isEgiszActivated;
+
+  // ЭМК (для совместимости)
   final String? diagnosis;
   final String? contraindications;
   final String? treatmentGoals;
@@ -15,9 +73,50 @@ class Patient {
     this.id,
     required this.name,
     required this.birthDate,
-    this.photoPath,
+    this.gender,
+    this.snils,
+    this.passportData,
+    this.phone,
     required this.relativeContact,
+    this.representativeData,
+    this.photoPath,
+    this.skkNumber,
+    this.skkDate,
+    this.issuedByLpu,
+    this.mainDiagnosisMkb,
+    this.secondaryDiagnosesMkb,
+    this.checkInExamination,
+    this.healthGroup,
+    this.dietTable,
+    this.forbiddenProcedures,
+    this.mobilityRegime,
+    this.arrivalPurpose,
+    this.fundingSource,
+    this.sanatoriumProfile,
+    this.plannedArrival,
+    this.plannedDeparture,
+    this.actualArrival,
+    this.actualDeparture,
+    this.roomNumber,
+    this.building,
+    this.floor,
     this.doctorId,
+    this.bedDaysCount = 0,
+    this.roomCategory,
+    this.dietType,
+    this.specialNeeds,
+    this.lfkGroup,
+    this.culturalParticipation,
+    this.voucherType,
+    this.extraServices,
+    this.companionData,
+    this.status = 'active',
+    this.treatmentEfficiency,
+    this.treatmentDurationCategory,
+    this.benefitCategory,
+    this.egiszId,
+    this.fssReferralId,
+    this.isEgiszActivated = false,
     this.diagnosis,
     this.contraindications,
     this.treatmentGoals,
@@ -29,10 +128,51 @@ class Patient {
     return {
       'id': id,
       'name': name,
-      'birthDate': birthDate,
-      'photoPath': photoPath,
-      'relativeContact': relativeContact,
+      'birth_date': birthDate,
+      'gender': gender,
+      'snils': snils,
+      'passport_data': passportData,
+      'phone': phone,
+      'relative_contact': relativeContact,
+      'representative_data': representativeData,
+      'photo_path': photoPath,
+      'skk_number': skkNumber,
+      'skk_date': skkDate,
+      'issued_by_lpu': issuedByLpu,
+      'main_diagnosis_mkb': mainDiagnosisMkb,
+      'secondary_diagnoses_mkb': secondaryDiagnosesMkb,
+      'checkin_examination': checkInExamination,
+      'health_group': healthGroup,
+      'diet_table': dietTable,
+      'forbidden_procedures': forbiddenProcedures,
+      'mobility_regime': mobilityRegime,
+      'arrival_purpose': arrivalPurpose,
+      'funding_source': fundingSource,
+      'sanatorium_profile': sanatoriumProfile,
+      'planned_arrival': plannedArrival,
+      'planned_departure': plannedDeparture,
+      'actual_arrival': actualArrival,
+      'actual_departure': actualDeparture,
+      'room_number': roomNumber,
+      'building': building,
+      'floor': floor,
       'doctor_id': doctorId,
+      'bed_days_count': bedDaysCount,
+      'room_category': roomCategory,
+      'diet_type': dietType,
+      'special_needs': specialNeeds,
+      'lfk_group': lfkGroup,
+      'cultural_participation': culturalParticipation,
+      'voucher_type': voucherType,
+      'extra_services': extraServices,
+      'companion_data': companionData,
+      'status': status,
+      'treatment_efficiency': treatmentEfficiency,
+      'treatment_duration_category': treatmentDurationCategory,
+      'benefit_category': benefitCategory,
+      'egisz_id': egiszId,
+      'fss_referral_id': fssReferralId,
+      'is_egisz_activated': isEgiszActivated,
       'diagnosis': diagnosis,
       'contraindications': contraindications,
       'treatment_goals': treatmentGoals,
@@ -44,11 +184,52 @@ class Patient {
   factory Patient.fromMap(Map<String, dynamic> map) {
     return Patient(
       id: map['id'],
-      name: map['name'],
-      birthDate: map['birthDate'],
-      photoPath: map['photoPath'],
-      relativeContact: map['relativeContact'],
+      name: map['name'] ?? '',
+      birthDate: map['birth_date'] ?? '',
+      gender: map['gender'],
+      snils: map['snils'],
+      passportData: map['passport_data'],
+      phone: map['phone'],
+      relativeContact: map['relative_contact'] ?? '',
+      representativeData: map['representative_data'],
+      photoPath: map['photo_path'],
+      skkNumber: map['skk_number'],
+      skkDate: map['skk_date'],
+      issuedByLpu: map['issued_by_lpu'],
+      mainDiagnosisMkb: map['main_diagnosis_mkb'],
+      secondaryDiagnosesMkb: map['secondary_diagnoses_mkb'],
+      checkInExamination: map['checkin_examination'],
+      healthGroup: map['health_group'],
+      dietTable: map['diet_table'],
+      forbiddenProcedures: map['forbidden_procedures'],
+      mobilityRegime: map['mobility_regime'],
+      arrivalPurpose: map['arrival_purpose'],
+      fundingSource: map['funding_source'],
+      sanatoriumProfile: map['sanatorium_profile'],
+      plannedArrival: map['planned_arrival'],
+      plannedDeparture: map['planned_departure'],
+      actualArrival: map['actual_arrival'],
+      actualDeparture: map['actual_departure'],
+      roomNumber: map['room_number'],
+      building: map['building'],
+      floor: map['floor'],
       doctorId: map['doctor_id'],
+      bedDaysCount: map['bed_days_count'] ?? 0,
+      roomCategory: map['room_category'],
+      dietType: map['diet_type'],
+      specialNeeds: map['special_needs'],
+      lfkGroup: map['lfk_group'],
+      culturalParticipation: map['cultural_participation'],
+      voucherType: map['voucher_type'],
+      extraServices: map['extra_services'],
+      companionData: map['companion_data'],
+      status: map['status'] ?? 'active',
+      treatmentEfficiency: map['treatment_efficiency'],
+      treatmentDurationCategory: map['treatment_duration_category'],
+      benefitCategory: map['benefit_category'],
+      egiszId: map['egisz_id'],
+      fssReferralId: map['fss_referral_id'],
+      isEgiszActivated: map['is_egisz_activated'] ?? false,
       diagnosis: map['diagnosis'],
       contraindications: map['contraindications'],
       treatmentGoals: map['treatment_goals'],

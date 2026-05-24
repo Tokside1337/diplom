@@ -67,6 +67,23 @@ class _EMKScreenState extends State<EMKScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          _buildSection('0. САНАТОРНО-КУРОРТНАЯ КАРТА (СКК)', {
+            'Номер СКК': widget.patient.skkNumber,
+            'Дата выдачи': widget.patient.skkDate,
+            'Кем выдана': widget.patient.issuedByLpu,
+            'Основной диагноз (МКБ)': widget.patient.mainDiagnosisMkb,
+            'Группа здоровья': widget.patient.healthGroup,
+            'Стол питания': widget.patient.dietTable,
+            'Режим': widget.patient.mobilityRegime,
+          }, [
+            'Номер СКК',
+            'Дата выдачи',
+            'Кем выдана',
+            'Основной диагноз (МКБ)',
+            'Группа здоровья',
+            'Стол питания',
+            'Режим'
+          ]),
           _buildSection('1. ДИАГНОЗЫ', _emk!.diagnoses, [
             'Основной диагноз',
             'Сопутствующие',

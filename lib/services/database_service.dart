@@ -150,7 +150,7 @@ class DatabaseService {
     return null;
   }
 
-  Future<int> insertDoctor(Doctor doctor) async {
+  Future<int?> insertDoctor(Doctor doctor) async {
     try {
       final res = await http.post(
         Uri.parse('$_baseUrl/doctors'),
@@ -166,7 +166,7 @@ class DatabaseService {
     } catch (e) {
       debugPrint('insertDoctor error: $e');
     }
-    return 0;
+    return null;
   }
 
   Future<void> updateDoctor(Doctor d) async {
@@ -201,19 +201,7 @@ class DatabaseService {
       final res = await http.get(Uri.parse('$_baseUrl/patients'));
       if (res.statusCode == 200) {
         final List d = jsonDecode(res.body);
-        return d.map((i) => Patient(
-          id: i['id'], 
-          name: i['name'], 
-          birthDate: i['birthDate'], 
-          photoPath: i['photoPath'], 
-          relativeContact: i['relativeContact'], 
-          doctorId: i['doctorId'],
-          diagnosis: i['diagnosis'],
-          contraindications: i['contraindications'],
-          treatmentGoals: i['treatmentGoals'],
-          dynamics: i['dynamics'],
-          finalRecommendations: i['finalRecommendations']
-        )).toList();
+        return d.map((i) => Patient.fromMap(i)).toList();
       }
     } catch (e) {
       debugPrint('getPatients error: $e');
@@ -226,19 +214,7 @@ class DatabaseService {
       final res = await http.get(Uri.parse('$_baseUrl/patients/$id'));
       if (res.statusCode == 200) {
         final i = jsonDecode(res.body);
-        return Patient(
-          id: i['id'], 
-          name: i['name'], 
-          birthDate: i['birthDate'], 
-          photoPath: i['photoPath'], 
-          relativeContact: i['relativeContact'], 
-          doctorId: i['doctorId'],
-          diagnosis: i['diagnosis'],
-          contraindications: i['contraindications'],
-          treatmentGoals: i['treatmentGoals'],
-          dynamics: i['dynamics'],
-          finalRecommendations: i['finalRecommendations']
-        );
+        return Patient.fromMap(i);
       }
     } catch (e) {
       debugPrint('getPatientById error: $e');
@@ -246,48 +222,25 @@ class DatabaseService {
     return null;
   }
 
-  Future<int> insertPatient(Patient p) async {
+  Future<int?> insertPatient(Patient p) async {
     try {
       final res = await http.post(
         Uri.parse('$_baseUrl/patients'), 
-        body: jsonEncode({
-          'name': p.name, 
-          'birthDate': p.birthDate, 
-          'photoPath': p.photoPath, 
-          'relativeContact': p.relativeContact, 
-          'doctorId': p.doctorId,
-          'diagnosis': p.diagnosis,
-          'contraindications': p.contraindications,
-          'treatmentGoals': p.treatmentGoals,
-          'dynamics': p.dynamics,
-          'finalRecommendations': p.finalRecommendations
-        }), 
+        body: jsonEncode(p.toMap()), 
         headers: {'Content-Type': 'application/json'}
       );
       if (res.statusCode == 200) return jsonDecode(res.body)['id'];
     } catch (e) {
       debugPrint('insertPatient error: $e');
     }
-    return 0;
+    return null;
   }
 
   Future<void> updatePatient(Patient p) async {
     try {
       await http.put(
         Uri.parse('$_baseUrl/patients'), 
-        body: jsonEncode({
-          'id': p.id, 
-          'name': p.name, 
-          'birthDate': p.birthDate, 
-          'photoPath': p.photoPath, 
-          'relativeContact': p.relativeContact, 
-          'doctorId': p.doctorId,
-          'diagnosis': p.diagnosis,
-          'contraindications': p.contraindications,
-          'treatmentGoals': p.treatmentGoals,
-          'dynamics': p.dynamics,
-          'finalRecommendations': p.finalRecommendations
-        }), 
+        body: jsonEncode(p.toMap()), 
         headers: {'Content-Type': 'application/json'}
       );
     } catch (e) {

@@ -705,6 +705,12 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                 style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
               ),
               const SizedBox(height: 24),
+              _buildSectionTitle('Общая информация'),
+              _buildGeneralInfoCard(),
+              const SizedBox(height: 24),
+              _buildSectionTitle('Размещение и Сервис'),
+              _buildSanatoriumDetailsCard(),
+              const SizedBox(height: 24),
               _buildSectionTitle('Рекомендации и Анализ ИИ'),
               _buildAICard(),
               const SizedBox(height: 24),
@@ -758,6 +764,14 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _buildPatientHeader(),
+              const SizedBox(height: 24),
+              _buildSectionTitle('Паспортные данные и контакты'),
+              _buildGeneralInfoCard(),
+              const SizedBox(height: 24),
+              _buildSectionTitle('Размещение в санатории'),
+              _buildSanatoriumDetailsCard(),
+              const SizedBox(height: 24),
               _buildSectionTitle('Аналитика ИИ и Прогноз'),
               _buildAICard(centeredTitle: true),
               const SizedBox(height: 24),
@@ -836,6 +850,59 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildGeneralInfoCard() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final p = widget.patient;
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5))),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          children: [
+            _buildDetailRow(Icons.fingerprint_rounded, 'СНИЛС', p.snils ?? 'Не указан'),
+            _buildDetailRow(Icons.badge_outlined, 'Паспорт', p.passportData ?? 'Не указан'),
+            _buildDetailRow(Icons.wc_rounded, 'Пол', p.gender ?? 'Не указан'),
+            _buildDetailRow(Icons.phone_android_rounded, 'Телефон', p.phone ?? 'Не указан'),
+            _buildDetailRow(Icons.family_restroom_rounded, 'Близкие', p.relativeContact),
+            if (p.representativeData != null) _buildDetailRow(Icons.supervisor_account_rounded, 'Представитель', p.representativeData!),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSanatoriumDetailsCard() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final p = widget.patient;
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5))),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          children: [
+            _buildDetailRow(Icons.meeting_room_rounded, 'Номер / Корпус', '${p.roomNumber ?? '—'} / ${p.building ?? '—'} (${p.floor ?? '—'} эт.)'),
+            _buildDetailRow(Icons.hotel_class_rounded, 'Категория', p.roomCategory ?? 'Не указана'),
+            _buildDetailRow(Icons.restaurant_rounded, 'Питание', p.dietType ?? 'Стандарт'),
+            _buildDetailRow(Icons.calendar_today_rounded, 'Заезд (план/факт)', '${p.plannedArrival ?? '—'} / ${p.actualArrival ?? '—'}'),
+            _buildDetailRow(Icons.event_busy_rounded, 'Выезд (план/факт)', '${p.plannedDeparture ?? '—'} / ${p.actualDeparture ?? '—'}'),
+            _buildDetailRow(Icons.credit_card_rounded, 'Источник / Тип', '${p.fundingSource ?? '—'} / ${p.voucherType ?? '—'}'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, String value) {
+    return ListTile(
+      dense: true,
+      leading: Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+      title: Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+      subtitle: Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
     );
   }
 
