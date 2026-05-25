@@ -56,7 +56,7 @@ void main() async {
 
       final systemPrompt = isDoctor ? _doctorPrompt : _patientPrompt;
       final model = GenerativeModel(
-        model: 'gemini-1.5-flash-latest',
+        model: 'gemini-3.1-flash-lite',
         apiKey: _aiApiKey,
         systemInstruction: Content.system(systemPrompt),
       );

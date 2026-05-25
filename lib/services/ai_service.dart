@@ -41,7 +41,31 @@ class AIService {
     }
   }
 
-  /// Вспомогательный метод для расчета числового веса текста (остается на клиенте для мгновенной оценки)
+  /// Получение глубокого анализа настроения от ИИ на сервере
+  static Future<Map<String, dynamic>> analyzeMoodWithAI(String text) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/ai/analyze-mood'),
+        body: jsonEncode({'text': text}),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      debugPrint('analyzeMoodWithAI error: $e');
+    }
+    
+    // Фолбэк на локальный анализ, если сервер недоступен
+    return {
+      'score': calculateMoodScore(text),
+      'sentiment': analyzeSentiment(text),
+      'analysis': 'Локальный анализ (сервер недоступен)'
+    };
+  }
+
+  /// Вспомогательный метод для расчета числового веса текста (остается на клиенте для фолбэка)
   static double _calculateRawScore(String text) {
     if (text.isEmpty) return 0.0;
     final normalizedText = text.toLowerCase();
@@ -59,6 +83,7 @@ class AIService {
       'понимание': 1.5, 'помощь': 1.0, 'родные': 1.0, 'семья': 0.5,
       'обнимали': 1.5, 'ценили': 1.2, 'родственники': 0.5, 'близкие': 1.0,
       'примирение': 1.7, 'согласие': 1.4, 'доверие': 1.6, 'верность': 1.5,
+      'прекрасный': 1.5, 'чудесно': 1.8, 'нормально': 0.5, 'супер': 1.5,
     };
 
     final Map<String, double> negativeScores = {
@@ -76,6 +101,7 @@ class AIService {
       'измена': -2.5, 'один': -1.0, 'ненужный': -1.8, 'отвергнут': -2.0,
       'одиночество': -1.8, 'вражда': -2.2, 'ненависть': -2.5, 'обида': -1.3,
       'упрек': -1.2, 'скандал': -2.0, 'холодность': -1.5,
+      'скучно': -1.0, 'никак': -0.5, 'пусто': -1.0,
     };
 
     final Map<String, double> criticalScores = {
