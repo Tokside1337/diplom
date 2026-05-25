@@ -318,7 +318,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: scoreColor.withAlpha(26), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(color: scoreColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
                 child: Text('Оценка ИИ: ${mood.score}/5', style: TextStyle(color: scoreColor, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: 16),
@@ -355,7 +355,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
             ],
           ),
           content: SizedBox(
-            width: double.maxFinite,
+            width: 450,
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -506,51 +506,54 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
             const Text('Новый замер'),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: systolicController, 
-                    keyboardType: TextInputType.number, 
-                    textAlign: TextAlign.center,
-                    decoration: InputDecoration(
-                      labelText: 'Сист.', 
-                      hintText: '120',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        content: SizedBox(
+          width: 350,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: systolicController, 
+                      keyboardType: TextInputType.number, 
+                      textAlign: TextAlign.center,
+                      decoration: InputDecoration(
+                        labelText: 'Сист.', 
+                        hintText: '120',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
                     ),
                   ),
-                ),
-                const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Text('/', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w300))),
-                Expanded(
-                  child: TextField(
-                    controller: diastolicController, 
-                    keyboardType: TextInputType.number, 
-                    textAlign: TextAlign.center,
-                    decoration: InputDecoration(
-                      labelText: 'Диаст.', 
-                      hintText: '80',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Text('/', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w300))),
+                  Expanded(
+                    child: TextField(
+                      controller: diastolicController, 
+                      keyboardType: TextInputType.number, 
+                      textAlign: TextAlign.center,
+                      decoration: InputDecoration(
+                        labelText: 'Диаст.', 
+                        hintText: '80',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: pulseController, 
-              keyboardType: TextInputType.number, 
-              decoration: InputDecoration(
-                labelText: 'Пульс', 
-                hintText: '70',
-                prefixIcon: const Icon(Icons.favorite_rounded, color: Colors.red),
-                suffixText: 'уд/мин',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              TextField(
+                controller: pulseController, 
+                keyboardType: TextInputType.number, 
+                decoration: InputDecoration(
+                  labelText: 'Пульс', 
+                  hintText: '70',
+                  prefixIcon: const Icon(Icons.favorite_rounded, color: Colors.red),
+                  suffixText: 'уд/мин',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
@@ -583,20 +586,23 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         title: const Text('Дневник настроения'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Опишите ваше самочувствие, и ИИ определит ваше состояние'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: commentController, 
-              maxLines: 4, 
-              decoration: InputDecoration(
-                hintText: 'Например: Сегодня чувствую себя бодро, выспался и готов к прогулке...', 
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        content: SizedBox(
+          width: 450,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Опишите ваше самочувствие, и ИИ определит ваше состояние'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: commentController, 
+                maxLines: 4, 
+                decoration: InputDecoration(
+                  hintText: 'Например: Сегодня чувствую себя бодро, выспался и готов к прогулке...', 
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
@@ -678,6 +684,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   }
 
   Widget _buildPatientProfile() {
+    final isWide = MediaQuery.of(context).size.width > 900;
     return Scaffold(
       appBar: widget.hideNavigation ? null : AppBar(
         title: const Text('Мой профиль'),
@@ -693,42 +700,47 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildPatientHeader(),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => EMKScreen(patient: widget.patient, isDoctor: false))),
-                icon: const Icon(Icons.medical_information_rounded),
-                label: const Text('Открыть Электронную мед. карту (ЭМК)'),
-                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: isWide ? 1000 : double.infinity),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildPatientHeader(),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => EMKScreen(patient: widget.patient, isDoctor: false))),
+                    icon: const Icon(Icons.medical_information_rounded),
+                    label: const Text('Открыть Электронную мед. карту (ЭМК)'),
+                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+                  ),
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('Общая информация'),
+                  _buildGeneralInfoCard(),
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('Размещение и Сервис'),
+                  _buildSanatoriumDetailsCard(),
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('Рекомендации и Анализ ИИ'),
+                  _buildAICard(),
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('Мои показатели давления'),
+                  _buildChart(),
+                  const SizedBox(height: 12),
+                  _buildMeasurementsDetails(),
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('План мероприятий'),
+                  _buildAppointmentsList(),
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('Результаты опросников'),
+                  _buildQuestionnaireResults(),
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('Дневник настроения'),
+                  _buildMoodList(),
+                  const SizedBox(height: 100),
+                ],
               ),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Общая информация'),
-              _buildGeneralInfoCard(),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Размещение и Сервис'),
-              _buildSanatoriumDetailsCard(),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Рекомендации и Анализ ИИ'),
-              _buildAICard(),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Мои показатели давления'),
-              _buildChart(),
-              const SizedBox(height: 12),
-              _buildMeasurementsDetails(),
-              const SizedBox(height: 24),
-              _buildSectionTitle('План мероприятий'),
-              _buildAppointmentsList(),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Результаты опросников'),
-              _buildQuestionnaireResults(),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Дневник настроения'),
-              _buildMoodList(),
-              const SizedBox(height: 100),
-            ],
+            ),
           ),
         ),
       ),
@@ -741,6 +753,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   }
 
   Widget _buildDoctorView() {
+    final isWide = MediaQuery.of(context).size.width > 900;
     return Scaffold(
       appBar: AppBar(
         title: Text('Пациент: ${_formatNameShort(widget.patient.name)}'),
@@ -761,35 +774,40 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildPatientHeader(),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Паспортные данные и контакты'),
-              _buildGeneralInfoCard(),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Размещение в санатории'),
-              _buildSanatoriumDetailsCard(),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Аналитика ИИ и Прогноз'),
-              _buildAICard(centeredTitle: true),
-              const SizedBox(height: 24),
-              _buildSectionTitle('График давления'),
-              _buildChart(),
-              const SizedBox(height: 12),
-              _buildMeasurementsDetails(),
-              const SizedBox(height: 24),
-              _buildSectionTitle('План мероприятий'),
-              _buildAppointmentsList(),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Результаты опросников'),
-              _buildQuestionnaireResults(),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Психологический профиль'),
-              _buildMoodList(),
-              const SizedBox(height: 100),
-            ],
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: isWide ? 1000 : double.infinity),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildPatientHeader(),
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('Паспортные данные и контакты'),
+                  _buildGeneralInfoCard(),
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('Размещение в санатории'),
+                  _buildSanatoriumDetailsCard(),
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('Аналитика ИИ и Прогноз'),
+                  _buildAICard(centeredTitle: true),
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('График давления'),
+                  _buildChart(),
+                  const SizedBox(height: 12),
+                  _buildMeasurementsDetails(),
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('План мероприятий'),
+                  _buildAppointmentsList(),
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('Результаты опросников'),
+                  _buildQuestionnaireResults(),
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('Психологический профиль'),
+                  _buildMoodList(),
+                  const SizedBox(height: 100),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -805,47 +823,51 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   Widget _buildGlassFab(List<_ActionItem> items) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isWide = MediaQuery.of(context).size.width > 900;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(32),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Container(
-            height: 64,
-            decoration: BoxDecoration(
-              color: isDark ? Colors.black.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(32),
-              border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              children: items.asMap().entries.map((entry) {
-                final idx = entry.key;
-                final item = entry.value;
-                return Expanded(
-                  child: Row(
-                    children: [
-                      if (idx > 0) VerticalDivider(width: 1, thickness: 1, indent: 20, endIndent: 20, color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
-                      Expanded(
-                        child: InkWell(
-                          onTap: item.onTap,
-                          child: Center(
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(item.icon, color: item.color, size: 22),
-                                const SizedBox(width: 8),
-                                Text(item.label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                              ],
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: isWide ? 800 : double.infinity),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(32),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(
+              height: 64,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.black.withOpacity(0.5) : Colors.white.withOpacity(0.6),
+                borderRadius: BorderRadius.circular(32),
+                border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: items.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final item = entry.value;
+                  return Expanded(
+                    child: Row(
+                      children: [
+                        if (idx > 0) VerticalDivider(width: 1, thickness: 1, indent: 20, endIndent: 20, color: colorScheme.outlineVariant.withOpacity(0.5)),
+                        Expanded(
+                          child: InkWell(
+                            onTap: item.onTap,
+                            child: Center(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(item.icon, color: item.color, size: 22),
+                                  const SizedBox(width: 8),
+                                  Text(item.label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
             ),
           ),
         ),
@@ -858,7 +880,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     final p = widget.patient;
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5))),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.5))),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Column(
@@ -880,7 +902,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     final p = widget.patient;
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5))),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.5))),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Column(
@@ -910,7 +932,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5))),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.5))),
       child: Column(
         children: [
           ListTile(
@@ -937,7 +959,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     return Card(
       elevation: 0,
-      color: Theme.of(context).brightness == Brightness.dark ? colorScheme.primaryContainer.withValues(alpha: 0.1) : colorScheme.primaryContainer.withValues(alpha: 0.4),
+      color: Theme.of(context).brightness == Brightness.dark ? colorScheme.primaryContainer.withOpacity(0.1) : colorScheme.primaryContainer.withOpacity(0.4),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -966,7 +988,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     if (_measurements.isEmpty) return const SizedBox();
     return Container(
       height: 220,
-      decoration: BoxDecoration(color: Theme.of(context).cardColor, borderRadius: BorderRadius.circular(20), border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4))),
+      decoration: BoxDecoration(color: Theme.of(context).cardColor, borderRadius: BorderRadius.circular(20), border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.4))),
       padding: const EdgeInsets.fromLTRB(10, 24, 20, 10),
       child: LineChart(LineChartData(
         gridData: const FlGridData(show: false),
@@ -986,7 +1008,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       children: _measurements.reversed.take(3).map((m) => Card(
         elevation: 0,
         margin: const EdgeInsets.only(bottom: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3))),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.3))),
         child: ListTile(dense: true, leading: const Icon(Icons.favorite_rounded, color: Colors.red, size: 20), title: Text('${m.pressureSystolic.toInt()}/${m.pressureDiastolic.toInt()} мм рт.ст.', style: const TextStyle(fontWeight: FontWeight.bold)), trailing: Text(m.timestamp.substring(11, 16))),
       )).toList(),
     );
@@ -1030,11 +1052,11 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                   Card(
                     elevation: 0,
                     margin: const EdgeInsets.only(bottom: 8),
-                    color: statusColor?.withValues(alpha: 0.08),
+                    color: statusColor?.withOpacity(0.08),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16), 
                       side: BorderSide(
-                        color: statusColor?.withValues(alpha: 0.4) ?? colorScheme.outlineVariant.withValues(alpha: 0.4)
+                        color: statusColor?.withOpacity(0.4) ?? colorScheme.outlineVariant.withOpacity(0.4)
                       )
                     ),
                     child: ListTile(
@@ -1064,8 +1086,8 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: [
-                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0),
-                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.8),
+                                Theme.of(context).scaffoldBackgroundColor.withOpacity(0),
+                                Theme.of(context).scaffoldBackgroundColor.withOpacity(0.8),
                               ],
                             ),
                           ),
@@ -1091,10 +1113,10 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(30),
                       color: _isAppointmentsExpanded 
-                        ? colorScheme.primaryContainer.withValues(alpha: 0.3)
-                        : colorScheme.primary.withValues(alpha: 0.1),
+                        ? colorScheme.primaryContainer.withOpacity(0.3)
+                        : colorScheme.primary.withOpacity(0.1),
                       border: Border.all(
-                        color: colorScheme.primary.withValues(alpha: 0.2),
+                        color: colorScheme.primary.withOpacity(0.2),
                         width: 1.5,
                       ),
                     ),
@@ -1169,10 +1191,10 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                   Card(
                     elevation: 0,
                     margin: const EdgeInsets.only(bottom: 8),
-                    color: scoreColor.withValues(alpha: 0.05),
+                    color: scoreColor.withOpacity(0.05),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16), 
-                      side: BorderSide(color: scoreColor.withValues(alpha: 0.3))
+                      side: BorderSide(color: scoreColor.withOpacity(0.3))
                     ),
                     child: ListTile(
                       onTap: () => _showMoodDetails(m),
@@ -1195,8 +1217,8 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: [
-                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0),
-                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.8),
+                                Theme.of(context).scaffoldBackgroundColor.withOpacity(0),
+                                Theme.of(context).scaffoldBackgroundColor.withOpacity(0.8),
                               ],
                             ),
                           ),
@@ -1222,10 +1244,10 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(30),
                       color: _isMoodExpanded 
-                        ? colorScheme.primaryContainer.withValues(alpha: 0.3)
-                        : colorScheme.primary.withValues(alpha: 0.1),
+                        ? colorScheme.primaryContainer.withOpacity(0.3)
+                        : colorScheme.primary.withOpacity(0.1),
                       border: Border.all(
-                        color: colorScheme.primary.withValues(alpha: 0.2),
+                        color: colorScheme.primary.withOpacity(0.2),
                         width: 1.5,
                       ),
                     ),
@@ -1295,10 +1317,10 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                   Card(
                     elevation: 0,
                     margin: const EdgeInsets.only(bottom: 8),
-                    color: resultColor.withValues(alpha: 0.05),
+                    color: resultColor.withOpacity(0.05),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16), 
-                      side: BorderSide(color: resultColor.withValues(alpha: 0.3))
+                      side: BorderSide(color: resultColor.withOpacity(0.3))
                     ),
                     child: ListTile(
                       title: Text(res.title), 
@@ -1309,9 +1331,9 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                             decoration: BoxDecoration(
-                              color: resultColor.withValues(alpha: 0.1),
+                              color: resultColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: resultColor.withValues(alpha: 0.4)),
+                              border: Border.all(color: resultColor.withOpacity(0.4)),
                             ),
                             child: Text(
                               '${res.totalScore} баллов', 
@@ -1337,8 +1359,8 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: [
-                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0),
-                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.8),
+                                Theme.of(context).scaffoldBackgroundColor.withOpacity(0),
+                                Theme.of(context).scaffoldBackgroundColor.withOpacity(0.8),
                               ],
                             ),
                           ),
@@ -1364,10 +1386,10 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(30),
                       color: _isQuestionnaireExpanded 
-                        ? colorScheme.primaryContainer.withValues(alpha: 0.3)
-                        : colorScheme.primary.withValues(alpha: 0.1),
+                        ? colorScheme.primaryContainer.withOpacity(0.3)
+                        : colorScheme.primary.withOpacity(0.1),
                       border: Border.all(
-                        color: colorScheme.primary.withValues(alpha: 0.2),
+                        color: colorScheme.primary.withOpacity(0.2),
                         width: 1.5,
                       ),
                     ),

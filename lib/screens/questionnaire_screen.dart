@@ -12,113 +12,174 @@ class QuestionnaireScreen extends StatefulWidget {
 
 class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
   final DatabaseService _dbService = DatabaseService();
+  
   final List<Map<String, dynamic>> _questions = [
     {'q': 'Беспокоят ли вас навязчивые воспоминания о событии?', 'score': 0},
     {'q': 'Испытываете ли вы трудности с засыпанием?', 'score': 0},
     {'q': 'Чувствуете ли вы отдаленность от других людей?', 'score': 0},
     {'q': 'Снизился ли интерес к важным для вас занятиям?', 'score': 0},
+    {'q': 'Трудности с концентрацией внимания?', 'score': 0},
+    {'q': 'Повышенная раздражительность или вспышки гнева?', 'score': 0},
+    {'q': 'Чрезмерная настороженность или пугливость?', 'score': 0},
+  ];
+
+  final List<String> _options = [
+    'Совсем нет',
+    'Немного',
+    'Умеренно',
+    'Сильно',
+    'Очень сильно'
   ];
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isWide = MediaQuery.of(context).size.width > 900;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Опросник PTSD')),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _questions.length,
-        itemBuilder: (context, index) {
-          return Card(
-            elevation: 0,
-            margin: const EdgeInsets.only(bottom: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _questions[index]['q'],
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const Icon(Icons.sentiment_satisfied_rounded, size: 20, color: Colors.grey),
-                      Expanded(
-                        child: Slider(
-                          value: _questions[index]['score'].toDouble(),
-                          min: 0,
-                          max: 5,
-                          divisions: 5,
-                          label: _questions[index]['score'].toString(),
-                          onChanged: (val) {
-                            setState(() => _questions[index]['score'] = val.toInt());
-                          },
-                        ),
-                      ),
-                      const Icon(Icons.sentiment_very_dissatisfied_rounded, size: 20, color: Colors.redAccent),
-                    ],
-                  ),
-                  Center(
-                    child: Text(
-                      'Балл: ${_questions[index]['score']}',
-                      style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
+      appBar: AppBar(
+        title: const Text('Опросник состояния'),
+        centerTitle: true,
       ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          border: Border(top: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3))),
-        ),
-        child: FilledButton(
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(56),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          ),
-          onPressed: () async {
-            int total = _questions.fold(0, (sum, item) => sum + (item['score'] as int));
-            
-            await _dbService.insertQuestionnaireResult(QuestionnaireResult(
-              patientId: widget.patientId,
-              title: 'PTSD-чеклист',
-              totalScore: total,
-              date: DateTime.now().toUtc().add(const Duration(hours: 3)).toString(),
-            ));
-
-            if (!context.mounted) return;
-
-            showDialog(
-              context: context,
-              builder: (c) => AlertDialog(
-                title: const Text('Результат сохранен'),
-                content: Text('Общий балл: $total. ${total > 10 ? "Рекомендуется консультация специалиста." : "Показатели в норме."}'),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(c);
-                      Navigator.pop(context);
-                    }, 
-                    child: const Text('Понятно')
-                  )
-                ],
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: isWide ? 800 : double.infinity),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            children: [
+              _buildHeader(colorScheme),
+              const SizedBox(height: 24),
+              ...List.generate(_questions.length, (index) => _buildQuestionCard(index, colorScheme)),
+              const SizedBox(height: 32),
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(56),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    onPressed: _saveResults,
+                    child: const Text('Завершить опрос', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                ),
               ),
-            );
-          },
-          child: const Text('Завершить опрос', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 48),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  Widget _buildHeader(ColorScheme colorScheme) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: colorScheme.primaryContainer.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: const Text(
+        'Оцените, насколько указанные проблемы беспокоили вас за последнюю неделю.',
+        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+  Widget _buildQuestionCard(int index, ColorScheme colorScheme) {
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 20),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.4)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Вопрос ${index + 1}',
+              style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 12),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _questions[index]['q'],
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            ...List.generate(5, (optionIdx) {
+              final isSelected = _questions[index]['score'] == optionIdx;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: InkWell(
+                  onTap: () => setState(() => _questions[index]['score'] = optionIdx),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected ? colorScheme.primary : colorScheme.outlineVariant.withOpacity(0.3),
+                        width: isSelected ? 2 : 1,
+                      ),
+                      color: isSelected ? colorScheme.primaryContainer.withOpacity(0.1) : null,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+                          color: isSelected ? colorScheme.primary : colorScheme.outline,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(_options[optionIdx], style: const TextStyle(fontSize: 15)),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveResults() async {
+    try {
+      int total = _questions.fold(0, (sum, item) => sum + (item['score'] as int));
+      await _dbService.insertQuestionnaireResult(QuestionnaireResult(
+        patientId: widget.patientId,
+        title: 'Опросник состояния',
+        totalScore: total,
+        date: DateTime.now().toUtc().add(const Duration(hours: 3)).toString(),
+      ));
+
+      if (!mounted) return;
+      
+      showDialog(
+        context: context,
+        builder: (c) => AlertDialog(
+          title: const Text('Результат сохранен'),
+          content: Text('Общий балл: $total'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(c);
+                Navigator.pop(context);
+              },
+              child: const Text('ОК'),
+            )
+          ],
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      }
+    }
   }
 }

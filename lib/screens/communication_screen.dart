@@ -37,62 +37,68 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isWide = MediaQuery.of(context).size.width > 900;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Заметки консилиума'),
       ),
-      body: Column(
-        children: [
-          if (!widget.isPatientView) ...[
-            Expanded(
-              child: FutureBuilder<List<Map<String, dynamic>>>(
-                future: _dbService.getNotes(widget.patientId),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-                  if (snapshot.data!.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.notes_rounded, size: 64, color: colorScheme.outlineVariant),
-                          const SizedBox(height: 16),
-                          Text('Заметок пока нет', style: TextStyle(color: colorScheme.onSurfaceVariant)),
-                        ],
-                      ),
-                    );
-                  }
-                  return ListView.builder(
-                    reverse: true,
-                    padding: const EdgeInsets.all(16),
-                    itemCount: snapshot.data!.length,
-                    itemBuilder: (context, index) => _buildChatBubble(snapshot.data![index]),
-                  );
-                },
-              ),
-            ),
-            _buildInputArea(),
-          ] else
-            Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.lock_person_rounded, size: 64, color: colorScheme.outlineVariant),
-                    const SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32),
-                      child: Text(
-                        'Раздел доступен только медицинскому персоналу',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 16),
-                      ),
-                    ),
-                  ],
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: isWide ? 1000 : double.infinity),
+          child: Column(
+            children: [
+              if (!widget.isPatientView) ...[
+                Expanded(
+                  child: FutureBuilder<List<Map<String, dynamic>>>(
+                    future: _dbService.getNotes(widget.patientId),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                      if (snapshot.data!.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.notes_rounded, size: 64, color: colorScheme.outlineVariant),
+                              const SizedBox(height: 16),
+                              Text('Заметок пока нет', style: TextStyle(color: colorScheme.onSurfaceVariant)),
+                            ],
+                          ),
+                        );
+                      }
+                      return ListView.builder(
+                        reverse: true,
+                        padding: const EdgeInsets.all(16),
+                        itemCount: snapshot.data!.length,
+                        itemBuilder: (context, index) => _buildChatBubble(snapshot.data![index]),
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ),
-        ],
+                _buildInputArea(),
+              ] else
+                Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.lock_person_rounded, size: 64, color: colorScheme.outlineVariant),
+                        const SizedBox(height: 16),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: Text(
+                            'Раздел доступен только медицинскому персоналу',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 16),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

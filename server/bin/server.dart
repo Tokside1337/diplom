@@ -10,7 +10,7 @@ const String _dbHost = 'localhost';
 const int _dbPort = 5432;
 const String _dbName = 'rehab_db';
 const String _dbUser = 'postgres';
-const String _dbPass = '1337';
+const String _dbPass = '12345';
 const String _aiApiKey = 'AIzaSyDAz3E57uUFa1wGarxoBa0GMPAdP5bbq00';
 
 late Connection conn;

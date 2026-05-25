@@ -536,6 +536,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
+    final isWide = MediaQuery.of(context).size.width > 900;
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Администрирование'),
@@ -550,13 +552,18 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _buildListView(_users, _buildUserTile),
-                _buildListView(_patients, _buildPatientTile),
-                _buildListView(_doctors, _buildDoctorTile),
-              ],
+          : Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: isWide ? 1000 : double.infinity),
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildListView(_users, _buildUserTile),
+                    _buildListView(_patients, _buildPatientTile),
+                    _buildListView(_doctors, _buildDoctorTile),
+                  ],
+                ),
+              ),
             ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showUserDialog(),

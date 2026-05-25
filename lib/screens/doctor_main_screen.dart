@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:diplom/models/doctor.dart';
@@ -379,6 +380,7 @@ class _DoctorAIChatTabState extends State<_DoctorAIChatTab> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isWide = MediaQuery.of(context).size.width > 900;
 
     return Scaffold(
       appBar: AppBar(
@@ -409,7 +411,9 @@ class _DoctorAIChatTabState extends State<_DoctorAIChatTab> {
                         bottomRight: Radius.circular(isAi ? 16 : 4),
                       ),
                     ),
-                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+                    constraints: BoxConstraints(
+                      maxWidth: min(MediaQuery.of(context).size.width * 0.75, 650)
+                    ),
                     child: Text(m['content']!, style: TextStyle(color: isAi ? colorScheme.onSecondaryContainer : colorScheme.onPrimary)),
                   ),
                 );

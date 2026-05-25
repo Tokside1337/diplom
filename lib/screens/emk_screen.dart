@@ -44,6 +44,7 @@ class _EMKScreenState extends State<EMKScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    final isWide = MediaQuery.of(context).size.width > 900;
 
     return Scaffold(
       appBar: AppBar(
@@ -64,55 +65,60 @@ class _EMKScreenState extends State<EMKScreen> {
             )
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _buildSection('0. САНАТОРНО-КУРОРТНАЯ КАРТА (СКК)', {
-            'Номер СКК': widget.patient.skkNumber,
-            'Дата выдачи': widget.patient.skkDate,
-            'Кем выдана': widget.patient.issuedByLpu,
-            'Основной диагноз (МКБ)': widget.patient.mainDiagnosisMkb,
-            'Группа здоровья': widget.patient.healthGroup,
-            'Стол питания': widget.patient.dietTable,
-            'Режим': widget.patient.mobilityRegime,
-          }, [
-            'Номер СКК',
-            'Дата выдачи',
-            'Кем выдана',
-            'Основной диагноз (МКБ)',
-            'Группа здоровья',
-            'Стол питания',
-            'Режим'
-          ]),
-          _buildSection('1. ДИАГНОЗЫ', _emk!.diagnoses, [
-            'Основной диагноз',
-            'Сопутствующие',
-            'Осложнения',
-            'Направление',
-            'Функциональный (МКФ)'
-          ]),
-          _buildSection('2. ПРОТИВОПОКАЗАНИЯ', _emk!.contraindications, [
-            'Абсолютные',
-            'Относительные',
-            'Аллергены',
-            'Запрещенные процедуры IDs',
-            'Макс. нагрузка (кг)'
-          ]),
-          _buildSection('3. ЦЕЛИ ЛЕЧЕНИЯ', _emk!.treatmentGoals, [
-            'Потенциал (high/medium/low)',
-            'SMART-цели',
-            'Шкалы на входе (MRC, Berg, Barthel)',
-            'Приоритеты'
-          ]),
-          _buildListSection('4.1 ЕЖЕДНЕВНЫЕ ЗАПИСИ', _emk!.dailyLogs),
-          _buildListSection('4.2 ЭТАПНЫЕ ОСМОТРЫ', _emk!.stageReviews),
-          _buildSection('5. ИТОГОВЫЕ РЕКОМЕНДАЦИИ', _emk!.finalRecommendations, [
-            'Эпикриз',
-            'Итоговый статус',
-            'Домашний режим',
-            'Лекарства'
-          ]),
-        ],
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: isWide ? 1000 : double.infinity),
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _buildSection('0. САНАТОРНО-КУРОРТНАЯ КАРТА (СКК)', {
+                'Номер СКК': widget.patient.skkNumber,
+                'Дата выдачи': widget.patient.skkDate,
+                'Кем выдана': widget.patient.issuedByLpu,
+                'Основной диагноз (МКБ)': widget.patient.mainDiagnosisMkb,
+                'Группа здоровья': widget.patient.healthGroup,
+                'Стол питания': widget.patient.dietTable,
+                'Режим': widget.patient.mobilityRegime,
+              }, [
+                'Номер СКК',
+                'Дата выдачи',
+                'Кем выдана',
+                'Основной диагноз (МКБ)',
+                'Группа здоровья',
+                'Стол питания',
+                'Режим'
+              ]),
+              _buildSection('1. ДИАГНОЗЫ', _emk!.diagnoses, [
+                'Основной диагноз',
+                'Сопутствующие',
+                'Осложнения',
+                'Направление',
+                'Функциональный (МКФ)'
+              ]),
+              _buildSection('2. ПРОТИВОПОКАЗАНИЯ', _emk!.contraindications, [
+                'Абсолютные',
+                'Относительные',
+                'Аллергены',
+                'Запрещенные процедуры IDs',
+                'Макс. нагрузка (кг)'
+              ]),
+              _buildSection('3. ЦЕЛИ ЛЕЧЕНИЯ', _emk!.treatmentGoals, [
+                'Потенциал (high/medium/low)',
+                'SMART-цели',
+                'Шкалы на входе (MRC, Berg, Barthel)',
+                'Приоритеты'
+              ]),
+              _buildListSection('4.1 ЕЖЕДНЕВНЫЕ ЗАПИСИ', _emk!.dailyLogs),
+              _buildListSection('4.2 ЭТАПНЫЕ ОСМОТРЫ', _emk!.stageReviews),
+              _buildSection('5. ИТОГОВЫЕ РЕКОМЕНДАЦИИ', _emk!.finalRecommendations, [
+                'Эпикриз',
+                'Итоговый статус',
+                'Домашний режим',
+                'Лекарства'
+              ]),
+            ],
+          ),
+        ),
       ),
     );
   }
