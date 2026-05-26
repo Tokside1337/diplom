@@ -8,12 +8,11 @@ import 'package:diplom/models/medical_models.dart';
 import 'package:diplom/models/doctor.dart';
 import 'package:diplom/models/emk_model.dart';
 
-class DatabaseService {
-  static final DatabaseService _instance = DatabaseService._internal();
-  factory DatabaseService() => _instance;
-  DatabaseService._internal();
+/// Базовая логика сетевых запросов
+mixin ApiClient {
+  String? _token;
 
-  String get _baseUrl {
+  String get baseUrl {
     if (kIsWeb) return 'http://localhost:8080';
     try {
       if (Platform.isAndroid) return 'http://10.0.2.2:8080';
@@ -21,566 +20,399 @@ class DatabaseService {
     return 'http://localhost:8080';
   }
 
+  Map<String, String> get headers {
+    final h = {'Content-Type': 'application/json'};
+    if (_token != null) {
+      h['Authorization'] = 'Bearer $_token';
+    }
+    return h;
+  }
+
+  void setToken(String? token) => _token = token;
+
+  Future<http.Response?> _safeRequest(Future<http.Response> Function() request, String label) async {
+    try {
+      final response = await request();
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return response;
+      }
+      debugPrint('API Error [$label]: ${response.statusCode} ${response.body}');
+    } catch (e) {
+      debugPrint('Network Error [$label]: $e');
+    }
+    return null;
+  }
+}
+
+/// Сервис для работы с базой данных через Backend API
+class DatabaseService with ApiClient {
+  static final DatabaseService _instance = DatabaseService._internal();
+  factory DatabaseService() => _instance;
+  DatabaseService._internal();
+
   // --- USERS ---
   Future<User?> loginUser(String login, String password) async {
-    try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/login'),
+    final res = await _safeRequest(
+      () => http.post(
+        Uri.parse('$baseUrl/login'),
         body: jsonEncode({'login': login, 'password': password}),
         headers: {'Content-Type': 'application/json'},
+      ),
+      'loginUser',
+    );
+    if (res == null) return null;
+    
+    final data = jsonDecode(res.body);
+    final String? token = data['accessToken'];
+    final Map<String, dynamic>? userData = data['user'];
+
+    if (token != null && userData != null) {
+      setToken(token);
+      return User(
+        id: userData['id'],
+        login: userData['login'] ?? '',
+        password: '', 
+        role: UserRole.values.firstWhere((e) => e.name == userData['role']),
+        patientId: userData['patient_id'],
+        doctorId: userData['doctor_id'],
       );
-      if (res.statusCode == 200) {
-        final d = jsonDecode(res.body);
-        return User(
-          id: d['id'],
-          login: d['login'],
-          password: d['password'],
-          role: UserRole.values.firstWhere((e) => e.name == d['role']),
-          patientId: d['patient_id'],
-          doctorId: d['doctor_id'],
-        );
-      }
-    } catch (e) {
-      debugPrint('loginUser error: $e');
     }
     return null;
   }
 
   Future<List<User>> getAllUsers() async {
-    try {
-      final res = await http.get(Uri.parse('$_baseUrl/users'));
-      if (res.statusCode == 200) {
-        final List d = jsonDecode(res.body);
-        return d.map((u) => User(
-          id: u['id'],
-          login: u['login'],
-          password: u['password'],
-          role: UserRole.values.firstWhere((e) => e.name == u['role']),
-          patientId: u['patient_id'],
-          doctorId: u['doctor_id']
-        )).toList();
-      }
-    } catch (e) {
-      debugPrint('getAllUsers error: $e');
-    }
-    return [];
+    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/users'), headers: headers), 'getAllUsers');
+    if (res == null) return [];
+    final List d = jsonDecode(res.body);
+    return d.map((u) => User(
+      id: u['id'],
+      login: u['login'],
+      password: u['password'] ?? '',
+      role: UserRole.values.firstWhere((e) => e.name == u['role']),
+      patientId: u['patient_id'],
+      doctorId: u['doctor_id']
+    )).toList();
   }
 
-  Future<void> registerUser(User user) async {
-    try {
-      await http.post(
-        Uri.parse('$_baseUrl/register'),
+  Future<void> registerUser(User u) async {
+    await _safeRequest(
+      () => http.post(
+        Uri.parse('$baseUrl/register'),
         body: jsonEncode({
-          'login': user.login,
-          'password': user.password,
-          'role': user.role.name,
-          'patient_id': user.patientId,
-          'doctor_id': user.doctorId
+          'login': u.login, 'password': u.password, 'role': u.role.name,
+          'patient_id': u.patientId, 'doctor_id': u.doctorId
         }),
-        headers: {'Content-Type': 'application/json'},
-      );
-    } catch (e) {
-      debugPrint('registerUser error: $e');
-    }
+        headers: headers,
+      ),
+      'registerUser',
+    );
   }
 
-  Future<void> updateUser(User user) async {
-    try {
-      await http.put(
-        Uri.parse('$_baseUrl/users'),
+  Future<void> updateUser(User u) async {
+    await _safeRequest(
+      () => http.put(
+        Uri.parse('$baseUrl/users'),
         body: jsonEncode({
-          'id': user.id,
-          'login': user.login,
-          'password': user.password,
-          'role': user.role.name,
-          'patient_id': user.patientId,
-          'doctor_id': user.doctorId
+          'id': u.id, 'login': u.login, 'password': u.password, 'role': u.role.name,
+          'patient_id': u.patientId, 'doctor_id': u.doctorId
         }),
-        headers: {'Content-Type': 'application/json'},
-      );
-    } catch (e) {
-      debugPrint('updateUser error: $e');
-    }
+        headers: headers,
+      ),
+      'updateUser',
+    );
   }
 
-  Future<void> deleteUser(int id) async {
-    try {
-      await http.delete(Uri.parse('$_baseUrl/users/$id'));
-    } catch (e) {
-      debugPrint('deleteUser error: $e');
-    }
-  }
+  Future<void> deleteUser(int id) async => 
+      await _safeRequest(() => http.delete(Uri.parse('$baseUrl/users/$id'), headers: headers), 'deleteUser');
 
   // --- DOCTORS ---
   Future<List<Doctor>> getDoctors() async {
-    try {
-      final res = await http.get(Uri.parse('$_baseUrl/doctors'));
-      if (res.statusCode == 200) {
-        final List d = jsonDecode(res.body);
-        return d.map((i) => Doctor(
-          id: i['id'],
-          name: i['name'],
-          specialization: i['specialization'],
-          phone: i['phone'],
-          cabinet: i['cabinet']
-        )).toList();
-      }
-    } catch (e) {
-      debugPrint('getDoctors error: $e');
-    }
-    return [];
+    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/doctors'), headers: headers), 'getDoctors');
+    if (res == null) return [];
+    final List d = jsonDecode(res.body);
+    return d.map((i) => Doctor(
+      id: i['id'], name: i['name'], specialization: i['specialization'],
+      phone: i['phone'], cabinet: i['cabinet']
+    )).toList();
   }
 
   Future<Doctor?> getDoctorById(int id) async {
-    try {
-      final res = await http.get(Uri.parse('$_baseUrl/doctors/$id'));
-      if (res.statusCode == 200) {
-        final i = jsonDecode(res.body);
-        return Doctor(
-          id: i['id'],
-          name: i['name'],
-          specialization: i['specialization'],
-          phone: i['phone'],
-          cabinet: i['cabinet']
-        );
-      }
-    } catch (e) {
-      debugPrint('getDoctorById error: $e');
-    }
-    return null;
+    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/doctors/$id'), headers: headers), 'getDoctorById');
+    if (res == null) return null;
+    final i = jsonDecode(res.body);
+    return Doctor(
+      id: i['id'], name: i['name'], specialization: i['specialization'],
+      phone: i['phone'], cabinet: i['cabinet']
+    );
   }
 
-  Future<int?> insertDoctor(Doctor doctor) async {
-    try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/doctors'),
+  Future<int?> insertDoctor(Doctor d) async {
+    final res = await _safeRequest(
+      () => http.post(
+        Uri.parse('$baseUrl/doctors'),
         body: jsonEncode({
-          'name': doctor.name,
-          'specialization': doctor.specialization,
-          'phone': doctor.phone,
-          'cabinet': doctor.cabinet
+          'name': d.name, 'specialization': d.specialization,
+          'phone': d.phone, 'cabinet': d.cabinet
         }),
-        headers: {'Content-Type': 'application/json'},
-      );
-      if (res.statusCode == 200) return jsonDecode(res.body)['id'];
-    } catch (e) {
-      debugPrint('insertDoctor error: $e');
-    }
-    return null;
+        headers: headers,
+      ),
+      'insertDoctor',
+    );
+    return res != null ? jsonDecode(res.body)['id'] : null;
   }
 
   Future<void> updateDoctor(Doctor d) async {
-    try {
-      await http.put(
-        Uri.parse('$_baseUrl/doctors'),
+    await _safeRequest(
+      () => http.put(
+        Uri.parse('$baseUrl/doctors'),
         body: jsonEncode({
-          'id': d.id,
-          'name': d.name,
-          'specialization': d.specialization,
-          'phone': d.phone,
-          'cabinet': d.cabinet
+          'id': d.id, 'name': d.name, 'specialization': d.specialization,
+          'phone': d.phone, 'cabinet': d.cabinet
         }),
-        headers: {'Content-Type': 'application/json'},
-      );
-    } catch (e) {
-      debugPrint('updateDoctor error: $e');
-    }
+        headers: headers,
+      ),
+      'updateDoctor',
+    );
   }
 
-  Future<void> deleteDoctor(int id) async {
-    try {
-      await http.delete(Uri.parse('$_baseUrl/doctors/$id'));
-    } catch (e) {
-      debugPrint('deleteDoctor error: $e');
-    }
-  }
+  Future<void> deleteDoctor(int id) async => 
+      await _safeRequest(() => http.delete(Uri.parse('$baseUrl/doctors/$id'), headers: headers), 'deleteDoctor');
 
   // --- PATIENTS ---
   Future<List<Patient>> getPatients() async {
-    try {
-      final res = await http.get(Uri.parse('$_baseUrl/patients'));
-      if (res.statusCode == 200) {
-        final List d = jsonDecode(res.body);
-        return d.map((i) => Patient.fromMap(i)).toList();
-      }
-    } catch (e) {
-      debugPrint('getPatients error: $e');
-    }
-    return [];
+    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/patients'), headers: headers), 'getPatients');
+    if (res == null) return [];
+    final List d = jsonDecode(res.body);
+    return d.map((i) => Patient.fromMap(i)).toList();
   }
 
   Future<Patient?> getPatientById(int id) async {
-    try {
-      final res = await http.get(Uri.parse('$_baseUrl/patients/$id'));
-      if (res.statusCode == 200) {
-        final i = jsonDecode(res.body);
-        return Patient.fromMap(i);
-      }
-    } catch (e) {
-      debugPrint('getPatientById error: $e');
-    }
-    return null;
+    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/patients/$id'), headers: headers), 'getPatientById');
+    return res != null ? Patient.fromMap(jsonDecode(res.body)) : null;
   }
 
   Future<int?> insertPatient(Patient p) async {
-    try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/patients'), 
-        body: jsonEncode(p.toMap()), 
-        headers: {'Content-Type': 'application/json'}
-      );
-      if (res.statusCode == 200) return jsonDecode(res.body)['id'];
-    } catch (e) {
-      debugPrint('insertPatient error: $e');
-    }
-    return null;
+    final res = await _safeRequest(
+      () => http.post(Uri.parse('$baseUrl/patients'), body: jsonEncode(p.toMap()), headers: headers),
+      'insertPatient',
+    );
+    return res != null ? jsonDecode(res.body)['id'] : null;
   }
 
-  Future<void> updatePatient(Patient p) async {
-    try {
-      await http.put(
-        Uri.parse('$_baseUrl/patients'), 
-        body: jsonEncode(p.toMap()), 
-        headers: {'Content-Type': 'application/json'}
-      );
-    } catch (e) {
-      debugPrint('updatePatient error: $e');
-    }
-  }
+  Future<void> updatePatient(Patient p) async => 
+      await _safeRequest(() => http.put(Uri.parse('$baseUrl/patients'), body: jsonEncode(p.toMap()), headers: headers), 'updatePatient');
 
-  Future<void> deletePatient(int id) async {
-    try {
-      await http.delete(Uri.parse('$_baseUrl/patients/$id'));
-    } catch (e) {
-      debugPrint('deletePatient error: $e');
-    }
-  }
+  Future<void> deletePatient(int id) async => 
+      await _safeRequest(() => http.delete(Uri.parse('$baseUrl/patients/$id'), headers: headers), 'deletePatient');
 
   // --- EMK ---
   Future<EMK?> getEMK(int patientId) async {
-    try {
-      final res = await http.get(Uri.parse('$_baseUrl/emk/$patientId'));
-      if (res.statusCode == 200) {
-        return EMK.fromMap(jsonDecode(res.body));
-      }
-    } catch (e) {
-      debugPrint('getEMK error: $e');
-    }
-    return null;
+    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/emk/$patientId'), headers: headers), 'getEMK');
+    return res != null ? EMK.fromMap(jsonDecode(res.body)) : null;
   }
 
   Future<void> saveEMK(EMK emk) async {
-    try {
-      final existing = await getEMK(emk.patientId);
-      if (existing == null) {
-        await http.post(
-          Uri.parse('$_baseUrl/emk'),
-          body: jsonEncode(emk.toMap()),
-          headers: {'Content-Type': 'application/json'},
-        );
-      } else {
-        await http.put(
-          Uri.parse('$_baseUrl/emk'),
-          body: jsonEncode(emk.toMap()),
-          headers: {'Content-Type': 'application/json'},
-        );
-      }
-    } catch (e) {
-      debugPrint('saveEMK error: $e');
+    final existing = await getEMK(emk.patientId);
+    final url = Uri.parse('$baseUrl/emk');
+    final body = jsonEncode(emk.toMap());
+    
+    if (existing == null) {
+      await _safeRequest(() => http.post(url, body: body, headers: headers), 'createEMK');
+    } else {
+      await _safeRequest(() => http.put(url, body: body, headers: headers), 'updateEMK');
     }
   }
 
-  // --- OTHERS ---
+  // --- MEASUREMENTS ---
   Future<List<Measurement>> getMeasurements(int id) async {
-    try {
-      final res = await http.get(Uri.parse('$_baseUrl/measurements/$id'));
-      if (res.statusCode == 200) {
-        final List d = jsonDecode(res.body);
-        return d.map((i) => Measurement(
-          id: i['id'],
-          patientId: i['patientId'],
-          pressureSystolic: (i['pressureSystolic'] as num).toDouble(),
-          pressureDiastolic: (i['pressureDiastolic'] as num).toDouble(),
-          pulse: i['pulse'],
-          painLevel: i['painLevel'],
-          timestamp: i['timestamp']
-        )).toList();
-      }
-    } catch (e) {
-      debugPrint('getMeasurements error: $e');
-    }
-    return [];
+    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/measurements/$id'), headers: headers), 'getMeasurements');
+    if (res == null) return [];
+    final List d = jsonDecode(res.body);
+    return d.map((i) => Measurement(
+      id: i['id'],
+      patientId: i['patientId'],
+      pressureSystolic: (i['pressureSystolic'] as num).toDouble(),
+      pressureDiastolic: (i['pressureDiastolic'] as num).toDouble(),
+      pulse: i['pulse'],
+      painLevel: i['painLevel'],
+      timestamp: i['timestamp']
+    )).toList();
   }
 
   Future<void> insertMeasurement(Measurement m) async {
-    try {
-      await http.post(
-        Uri.parse('$_baseUrl/measurements'),
+    await _safeRequest(
+      () => http.post(
+        Uri.parse('$baseUrl/measurements'),
         body: jsonEncode({
-          'patientId': m.patientId,
-          'pressureSystolic': m.pressureSystolic,
-          'pressureDiastolic': m.pressureDiastolic,
-          'pulse': m.pulse,
-          'painLevel': m.painLevel,
-          'timestamp': m.timestamp
+          'patientId': m.patientId, 'pressureSystolic': m.pressureSystolic,
+          'pressureDiastolic': m.pressureDiastolic, 'pulse': m.pulse,
+          'painLevel': m.painLevel, 'timestamp': m.timestamp
         }),
-        headers: {'Content-Type': 'application/json'},
-      );
-    } catch (e) {
-      debugPrint('insertMeasurement error: $e');
-    }
+        headers: headers,
+      ),
+      'insertMeasurement',
+    );
   }
 
+  // --- MOOD & NOTES ---
   Future<List<MoodEntry>> getMoodEntries(int id) async {
-    try {
-      final res = await http.get(Uri.parse('$_baseUrl/mood/$id'));
-      if (res.statusCode == 200) {
-        final List d = jsonDecode(res.body);
-        return d.map((i) => MoodEntry(
-          id: i['id'],
-          patientId: i['patientId'],
-          score: i['score'],
-          comment: i['comment'],
-          timestamp: i['timestamp'],
-          sentiment: i['sentiment']
-        )).toList();
-      }
-    } catch (e) {
-      debugPrint('getMoodEntries error: $e');
-    }
-    return [];
+    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/mood/$id'), headers: headers), 'getMoodEntries');
+    if (res == null) return [];
+    final List d = jsonDecode(res.body);
+    return d.map((i) => MoodEntry(
+      id: i['id'], patientId: i['patientId'], score: i['score'],
+      comment: i['comment'], timestamp: i['timestamp'], sentiment: i['sentiment']
+    )).toList();
   }
 
   Future<void> insertMoodEntry(MoodEntry m) async {
-    try {
-      await http.post(
-        Uri.parse('$_baseUrl/mood'),
+    await _safeRequest(
+      () => http.post(
+        Uri.parse('$baseUrl/mood'),
         body: jsonEncode({
-          'patientId': m.patientId,
-          'score': m.score,
-          'comment': m.comment,
-          'timestamp': m.timestamp,
-          'sentiment': m.sentiment
+          'patientId': m.patientId, 'score': m.score, 'comment': m.comment,
+          'timestamp': m.timestamp, 'sentiment': m.sentiment
         }),
-        headers: {'Content-Type': 'application/json'},
-      );
-    } catch (e) {
-      debugPrint('insertMoodEntry error: $e');
-    }
+        headers: headers,
+      ),
+      'insertMoodEntry',
+    );
   }
 
-  Future<void> deleteMoodEntry(int id) async {
-    try {
-      await http.delete(Uri.parse('$_baseUrl/mood/$id'));
-    } catch (e) {
-      debugPrint('deleteMoodEntry error: $e');
-    }
-  }
+  Future<void> deleteMoodEntry(int id) async => 
+      await _safeRequest(() => http.delete(Uri.parse('$baseUrl/mood/$id'), headers: headers), 'deleteMoodEntry');
 
   Future<List<Map<String, dynamic>>> getNotes(int id) async {
-    try {
-      final res = await http.get(Uri.parse('$_baseUrl/notes/$id'));
-      if (res.statusCode == 200) return List<Map<String, dynamic>>.from(jsonDecode(res.body));
-    } catch (e) {
-      debugPrint('getNotes error: $e');
-    }
-    return [];
+    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/notes/$id'), headers: headers), 'getNotes');
+    return res != null ? List<Map<String, dynamic>>.from(jsonDecode(res.body)) : [];
   }
 
   Future<void> insertNote(int patientId, String author, String content) async {
-    try {
-      await http.post(
-        Uri.parse('$_baseUrl/notes'),
+    await _safeRequest(
+      () => http.post(
+        Uri.parse('$baseUrl/notes'),
         body: jsonEncode({
-          'patientId': patientId,
-          'author': author,
-          'content': content,
+          'patientId': patientId, 'author': author, 'content': content,
           'timestamp': DateTime.now().toUtc().add(const Duration(hours: 3)).toString()
         }),
-        headers: {'Content-Type': 'application/json'},
-      );
-    } catch (e) {
-      debugPrint('insertNote error: $e');
-    }
+        headers: headers,
+      ),
+      'insertNote',
+    );
   }
 
+  // --- APPOINTMENTS & SCHEDULE ---
   Future<List<Appointment>> getAppointments(int id) async {
-    try {
-      final res = await http.get(Uri.parse('$_baseUrl/appointments/$id'));
-      if (res.statusCode == 200) {
-        final List d = jsonDecode(res.body);
-        return d.map((i) => Appointment(
-          id: i['id'],
-          patientId: i['patientId'],
-          type: i['type'],
-          title: i['title'],
-          time: i['time'],
-          room: i['room'],
-          doctor: i['doctor'],
-          status: i['status']
-        )).toList();
-      }
-    } catch (e) {
-      debugPrint('getAppointments error: $e');
-    }
-    return [];
+    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/appointments/$id'), headers: headers), 'getAppointments');
+    if (res == null) return [];
+    final List d = jsonDecode(res.body);
+    return d.map((i) => Appointment(
+      id: i['id'], patientId: i['patientId'], type: i['type'],
+      title: i['title'], time: i['time'], room: i['room'],
+      doctor: i['doctor'], status: i['status']
+    )).toList();
   }
 
   Future<void> insertAppointment(Appointment a) async {
-    try {
-      await http.post(
-        Uri.parse('$_baseUrl/appointments'),
+    await _safeRequest(
+      () => http.post(
+        Uri.parse('$baseUrl/appointments'),
         body: jsonEncode({
-          'patientId': a.patientId,
-          'type': a.type,
-          'title': a.title,
-          'time': a.time,
-          'room': a.room,
-          'doctor': a.doctor,
-          'status': a.status
+          'patientId': a.patientId, 'type': a.type, 'title': a.title,
+          'time': a.time, 'room': a.room, 'doctor': a.doctor, 'status': a.status
         }),
-        headers: {'Content-Type': 'application/json'},
-      );
-    } catch (e) {
-      debugPrint('insertAppointment error: $e');
-    }
-  }
-
-  Future<void> deleteAppointment(int id) async {
-    try {
-      await http.delete(Uri.parse('$_baseUrl/appointments/$id'));
-    } catch (e) {
-      debugPrint('deleteAppointment error: $e');
-    }
+        headers: headers,
+      ),
+      'insertAppointment',
+    );
   }
 
   Future<void> updateAppointmentStatus(int id, String status) async {
-    try {
-      await http.put(
-        Uri.parse('$_baseUrl/appointments/status'),
+    await _safeRequest(
+      () => http.put(
+        Uri.parse('$baseUrl/appointments/status'),
         body: jsonEncode({'id': id, 'status': status}),
-        headers: {'Content-Type': 'application/json'},
-      );
-    } catch (e) {
-      debugPrint('updateAppointmentStatus error: $e');
-    }
+        headers: headers,
+      ),
+      'updateAppointmentStatus',
+    );
   }
+
+  Future<void> deleteAppointment(int id) async => 
+      await _safeRequest(() => http.delete(Uri.parse('$baseUrl/appointments/$id'), headers: headers), 'deleteAppointment');
 
   Future<List<Map<String, dynamic>>> getDoctorSchedule(String doctorName) async {
-    try {
-      final res = await http.get(Uri.parse('$_baseUrl/schedule/${Uri.encodeComponent(doctorName)}'));
-      if (res.statusCode == 200) return List<Map<String, dynamic>>.from(jsonDecode(res.body));
-    } catch (e) {
-      debugPrint('getDoctorSchedule error: $e');
-    }
-    return [];
+    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/schedule/${Uri.encodeComponent(doctorName)}'), headers: headers), 'getDoctorSchedule');
+    return res != null ? List<Map<String, dynamic>>.from(jsonDecode(res.body)) : [];
   }
 
+  // --- QUESTIONNAIRES & HOSPITALIZATIONS ---
   Future<List<QuestionnaireResult>> getQuestionnaireResults(int id) async {
-    try {
-      final res = await http.get(Uri.parse('$_baseUrl/questionnaires/$id'));
-      if (res.statusCode == 200) {
-        final List d = jsonDecode(res.body);
-        return d.map((i) => QuestionnaireResult(
-          id: i['id'],
-          patientId: i['patientId'],
-          title: i['title'],
-          totalScore: i['totalScore'],
-          date: i['date']
-        )).toList();
-      }
-    } catch (e) {
-      debugPrint('getQuestionnaireResults error: $e');
-    }
-    return [];
+    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/questionnaires/$id'), headers: headers), 'getQuestionnaires');
+    if (res == null) return [];
+    final List d = jsonDecode(res.body);
+    return d.map((i) => QuestionnaireResult(
+      id: i['id'], patientId: i['patientId'], title: i['title'],
+      totalScore: i['totalScore'], date: i['date']
+    )).toList();
   }
 
   Future<void> insertQuestionnaireResult(QuestionnaireResult q) async {
-    try {
-      await http.post(
-        Uri.parse('$_baseUrl/questionnaires'),
+    await _safeRequest(
+      () => http.post(
+        Uri.parse('$baseUrl/questionnaires'),
         body: jsonEncode({
-          'patientId': q.patientId,
-          'title': q.title,
-          'totalScore': q.totalScore,
-          'date': q.date
+          'patientId': q.patientId, 'title': q.title,
+          'totalScore': q.totalScore, 'date': q.date
         }),
-        headers: {'Content-Type': 'application/json'},
-      );
-    } catch (e) {
-      debugPrint('insertQuestionnaireResult error: $e');
-    }
+        headers: headers,
+      ),
+      'insertQuestionnaire',
+    );
   }
 
-  Future<void> deleteQuestionnaireResult(int id) async {
-    try {
-      await http.delete(Uri.parse('$_baseUrl/questionnaires/$id'));
-    } catch (e) {
-      debugPrint('deleteQuestionnaireResult error: $e');
-    }
-  }
+  Future<void> deleteQuestionnaireResult(int id) async => 
+      await _safeRequest(() => http.delete(Uri.parse('$baseUrl/questionnaires/$id'), headers: headers), 'deleteQuestionnaire');
 
   Future<List<Map<String, dynamic>>> getHospitalizations(int id) async {
-    try {
-      final res = await http.get(Uri.parse('$_baseUrl/hospitalizations/$id'));
-      if (res.statusCode == 200) return List<Map<String, dynamic>>.from(jsonDecode(res.body));
-    } catch (e) {
-      debugPrint('getHospitalizations error: $e');
-    }
-    return [];
+    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/hospitalizations/$id'), headers: headers), 'getHospitalizations');
+    return res != null ? List<Map<String, dynamic>>.from(jsonDecode(res.body)) : [];
   }
 
   Future<void> insertHospitalization(int pId, String a, String d, String r, String dep) async {
-    try {
-      await http.post(
-        Uri.parse('$_baseUrl/hospitalizations'),
+    await _safeRequest(
+      () => http.post(
+        Uri.parse('$baseUrl/hospitalizations'),
         body: jsonEncode({
-          'patientId': pId,
-          'admission_date': a,
-          'discharge_date': d,
-          'reason': r,
-          'department': dep
+          'patientId': pId, 'admission_date': a, 'discharge_date': d,
+          'reason': r, 'department': dep
         }),
-        headers: {'Content-Type': 'application/json'},
-      );
-    } catch (e) {
-      debugPrint('insertHospitalization error: $e');
-    }
+        headers: headers,
+      ),
+      'insertHospitalization',
+    );
   }
 
   // --- REMINDERS ---
   Future<void> sendReminder(int patientId, int doctorId, String message) async {
-    try {
-      await http.post(
-        Uri.parse('$_baseUrl/reminders'),
+    await _safeRequest(
+      () => http.post(
+        Uri.parse('$baseUrl/reminders'),
         body: jsonEncode({
-          'patientId': patientId,
-          'doctorId': doctorId,
-          'message': message,
+          'patient_id': patientId, 'doctor_id': doctorId, 'message': message,
           'timestamp': DateTime.now().toIso8601String(),
         }),
-        headers: {'Content-Type': 'application/json'},
-      );
-    } catch (e) {
-      debugPrint('sendReminder error: $e');
-    }
+        headers: headers,
+      ),
+      'sendReminder',
+    );
   }
 
   Future<List<Map<String, dynamic>>> getUnreadReminders(int patientId) async {
-    try {
-      final res = await http.get(Uri.parse('$_baseUrl/reminders/unread/$patientId'));
-      if (res.statusCode == 200) return List<Map<String, dynamic>>.from(jsonDecode(res.body));
-    } catch (e) {
-      debugPrint('getUnreadReminders error: $e');
-    }
-    return [];
+    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/reminders/unread/$patientId'), headers: headers), 'getReminders');
+    return res != null ? List<Map<String, dynamic>>.from(jsonDecode(res.body)) : [];
   }
 
-  Future<void> markReminderAsRead(int id) async {
-    try {
-      await http.put(Uri.parse('$_baseUrl/reminders/read/$id'));
-    } catch (e) {
-      debugPrint('markReminderAsRead error: $e');
-    }
-  }
+  Future<void> markReminderAsRead(int id) async => 
+      await _safeRequest(() => http.put(Uri.parse('$baseUrl/reminders/read/$id'), headers: headers), 'markReminderRead');
 }

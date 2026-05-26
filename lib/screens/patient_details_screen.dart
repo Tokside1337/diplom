@@ -40,6 +40,7 @@ class PatientDetailsScreen extends StatefulWidget {
 
 class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   final DatabaseService _dbService = DatabaseService();
+  late Patient _currentPatient;
   List<Measurement> _measurements = [];
   List<MoodEntry> _moods = [];
   List<Appointment> _appointments = [];
@@ -114,6 +115,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   @override
   void initState() {
     super.initState();
+    _currentPatient = widget.patient;
     _loadData();
   }
 
@@ -131,21 +133,24 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
 
   Future<void> _loadData() async {
     try {
-      final m = await _dbService.getMeasurements(widget.patient.id!);
-      final mood = await _dbService.getMoodEntries(widget.patient.id!);
-      final appts = await _dbService.getAppointments(widget.patient.id!);
-      final qres = await _dbService.getQuestionnaireResults(widget.patient.id!);
+      final pId = _currentPatient.id!;
+      final latestPatient = await _dbService.getPatientById(pId);
+      final m = await _dbService.getMeasurements(pId);
+      final mood = await _dbService.getMoodEntries(pId);
+      final appts = await _dbService.getAppointments(pId);
+      final qres = await _dbService.getQuestionnaireResults(pId);
       final docs = await _dbService.getDoctors();
       
       Doctor? assignedDoc;
-      if (widget.patient.doctorId != null) {
+      final currentDocId = latestPatient?.doctorId ?? _currentPatient.doctorId;
+      if (currentDocId != null) {
         try {
-          assignedDoc = docs.firstWhere((d) => d.id == widget.patient.doctorId);
+          assignedDoc = docs.firstWhere((d) => d.id == currentDocId);
         } catch (_) {}
       }
 
       if (widget.isPatientView) {
-        final reminders = await _dbService.getUnreadReminders(widget.patient.id!);
+        final reminders = await _dbService.getUnreadReminders(pId);
         if (mounted && reminders.isNotEmpty) {
           setState(() {
             _unreadReminders = reminders;
@@ -156,6 +161,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       
       if (mounted) {
         setState(() {
+          if (latestPatient != null) _currentPatient = latestPatient;
           _measurements = m;
           _moods = mood;
           _appointments = appts;
@@ -165,7 +171,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
         });
 
         // Загружаем продвинутый анализ асинхронно
-        AIService.getAdvancedHealthAnalysis(widget.patient.id!).then((analysis) {
+        AIService.getAdvancedHealthAnalysis(pId).then((analysis) {
           if (mounted) {
             setState(() {
               _aiSummary = analysis['summary'] ?? 'Нет данных для анализа.';
@@ -481,7 +487,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
 
                 final fullDateTime = DateTime(selectedDate.year, selectedDate.month, selectedDate.day, selectedTime.hour, selectedTime.minute);
                 await _dbService.insertAppointment(Appointment(
-                  patientId: widget.patient.id!,
+                  patientId: _currentPatient.id!,
                   type: typeController.text,
                   title: title,
                   time: fullDateTime.toString(),
@@ -571,7 +577,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
           FilledButton(
             onPressed: () async {
               await _dbService.insertMeasurement(Measurement(
-                patientId: widget.patient.id!,
+                patientId: _currentPatient.id!,
                 pressureSystolic: double.tryParse(systolicController.text) ?? 120.0,
                 pressureDiastolic: double.tryParse(diastolicController.text) ?? 80.0,
                 pulse: int.tryParse(pulseController.text) ?? 70,
@@ -629,7 +635,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               final sentiment = AIService.analyzeSentiment(comment);
 
               await _dbService.insertMoodEntry(MoodEntry(
-                patientId: widget.patient.id!, 
+                patientId: _currentPatient.id!, 
                 score: calculatedScore, 
                 comment: comment,
                 timestamp: DateTime.now().toUtc().add(const Duration(hours: 3)).toString(),
@@ -666,7 +672,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
 
     if (confirmed == true) {
       await _dbService.sendReminder(
-        widget.patient.id!, 
+        _currentPatient.id!, 
         widget.doctor!.id!, 
         'Ваш лечащий врач просит вас измерить артериальное давление.'
       );
@@ -761,7 +767,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     final isWide = MediaQuery.of(context).size.width > 900;
     return Scaffold(
       appBar: AppBar(
-        title: Text('Пациент: ${_formatNameShort(widget.patient.name)}'),
+        title: Text('Пациент: ${_formatNameShort(_currentPatient.name)}'),
         actions: [
           IconButton(
             icon: const Icon(Icons.medical_information_rounded, color: Colors.blue),
@@ -770,7 +776,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline_rounded),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => CommunicationScreen(patientId: widget.patient.id!, isPatientView: false, doctor: widget.doctor))).then((_) => _loadData()),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => CommunicationScreen(patientId: _currentPatient.id!, isPatientView: false, doctor: widget.doctor))).then((_) => _loadData()),
           ),
         ],
       ),
@@ -827,7 +833,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       floatingActionButton: _buildGlassFab([
         _ActionItem(Icons.notification_add_rounded, 'Давление', Colors.red, _sendPressureReminder),
         _ActionItem(Icons.event_rounded, 'Мероприятие', Colors.orange, _addAppointment),
-        _ActionItem(Icons.assignment_rounded, 'Опросник', Colors.blue, () => Navigator.push(context, MaterialPageRoute(builder: (context) => QuestionnaireScreen(patientId: widget.patient.id!))).then((_) => _loadData())),
+        _ActionItem(Icons.assignment_rounded, 'Опросник', Colors.blue, () => Navigator.push(context, MaterialPageRoute(builder: (context) => QuestionnaireScreen(patientId: _currentPatient.id!))).then((_) => _loadData())),
       ]),
     );
   }
@@ -897,8 +903,8 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             leading: CircleAvatar(backgroundColor: colorScheme.primaryContainer, child: Icon(Icons.person_rounded, color: colorScheme.onPrimaryContainer)),
-            title: Text(_formatNameShort(widget.patient.name), style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('Дата рождения: ${widget.patient.birthDate}'),
+            title: Text(_formatNameShort(_currentPatient.name), style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text('Дата рождения: ${_currentPatient.birthDate}'),
           ),
           if (_assignedDoctor != null) ...[
             const Divider(height: 1, indent: 20, endIndent: 20),

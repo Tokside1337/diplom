@@ -18,24 +18,43 @@ class PatientMainScreen extends StatefulWidget {
 
 class _PatientMainScreenState extends State<PatientMainScreen> {
   int _selectedIndex = 0;
+  late Patient _currentPatient;
   late List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
+    _currentPatient = widget.patient;
+    _refreshPages();
+  }
+
+  void _refreshPages() {
     _pages = [
-      PatientDetailsScreen(patient: widget.patient, isPatientView: true, hideNavigation: true),
-      _DiaryTab(patient: widget.patient),
-      _AIChatTab(patient: widget.patient),
-      _ProfileTab(patient: widget.patient),
+      PatientDetailsScreen(patient: _currentPatient, isPatientView: true, hideNavigation: true),
+      _DiaryTab(patient: _currentPatient),
+      _AIChatTab(patient: _currentPatient),
+      _ProfileTab(patient: _currentPatient),
       _SettingsTab(),
     ];
+  }
+
+  Future<void> _updatePatientData() async {
+    final latest = await DatabaseService().getPatientById(_currentPatient.id!);
+    if (latest != null && mounted) {
+      setState(() {
+        _currentPatient = latest;
+        _refreshPages();
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final bool isWide = MediaQuery.of(context).size.width > 900;
-
+    
+    // Вызываем обновление данных при переключении на вкладку Профиль или Главная
+    // Или можно просто добавить RefreshIndicator в табы.
+    
     if (isWide) {
       return Scaffold(
         body: Row(
@@ -43,8 +62,10 @@ class _PatientMainScreenState extends State<PatientMainScreen> {
             NavigationRail(
               extended: MediaQuery.of(context).size.width > 1200,
               selectedIndex: _selectedIndex,
-              onDestinationSelected: (index) => setState(() => _selectedIndex = index),
-              labelType: MediaQuery.of(context).size.width > 1200 ? NavigationRailLabelType.none : NavigationRailLabelType.all,
+              onDestinationSelected: (index) {
+                setState(() => _selectedIndex = index);
+                _updatePatientData(); // Обновляем при клике
+              },
               destinations: const [
                 NavigationRailDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: Text('Главная')),
                 NavigationRailDestination(icon: Icon(Icons.book_outlined), selectedIcon: Icon(Icons.book_rounded), label: Text('Дневник')),
@@ -74,7 +95,10 @@ class _PatientMainScreenState extends State<PatientMainScreen> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+        onDestinationSelected: (index) {
+          setState(() => _selectedIndex = index);
+          _updatePatientData(); // Обновляем при клике
+        },
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Главная'),
           NavigationDestination(icon: Icon(Icons.book_outlined), selectedIcon: Icon(Icons.book_rounded), label: 'Дневник'),

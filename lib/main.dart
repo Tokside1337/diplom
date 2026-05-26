@@ -78,6 +78,7 @@ class RehabApp extends StatelessWidget {
           scrolledUnderElevation: 0,
         ),
         inputDecorationTheme: InputDecorationTheme(
+
           filled: true,
           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
