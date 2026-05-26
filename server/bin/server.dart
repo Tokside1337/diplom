@@ -40,17 +40,28 @@ void main() async {
 
       String contextData = '';
       if (patientId > 0) {
-        final pRes = await conn.execute(Sql.named('SELECT name, birth_date, diagnosis FROM patients WHERE id = @id'), parameters: {'id': patientId});
+        final pRes = await conn.execute(Sql.named('SELECT name, birth_date, main_diagnosis_mkb, health_group FROM patients WHERE id = @id'), parameters: {'id': patientId});
         if (pRes.isNotEmpty) {
           final p = pRes.first;
+          
+          // Добавляем данные из ЭМК в чат
+          final emkRes = await conn.execute(Sql.named('SELECT diagnoses, contraindications, treatment_goals FROM emk WHERE patient_id = @id'), parameters: {'id': patientId});
+          String emkStr = '';
+          if (emkRes.isNotEmpty) {
+            final e = emkRes.first;
+            emkStr = 'Диагнозы ЭМК: ${e[0] ?? "нет"}, Противопоказания: ${e[1] ?? "нет"}, SMART-цели: ${e[2] ?? "не заданы"}';
+          }
+
           final mRes = await conn.execute(Sql.named('SELECT pressure_systolic, pressure_diastolic FROM measurements WHERE patient_id = @id ORDER BY timestamp DESC LIMIT 5'), parameters: {'id': patientId});
           final moodRes = await conn.execute(Sql.named('SELECT comment FROM mood_entries WHERE patient_id = @id ORDER BY timestamp DESC LIMIT 3'), parameters: {'id': patientId});
 
-          contextData = 'Контекст пациента:\n'
+          contextData = 'КОНТЕКСТ ПАЦИЕНТА:\n'
               'Имя: ${p[0]}\n'
-              'Диагноз: ${p[2] ?? "Не указан"}\n'
-              'Последние замеры давления: ${mRes.map((m) => "${_toDouble(m[0]) ?? 0.0}/${_toDouble(m[1]) ?? 0.0}").join(", ")}\n'
-              'Последние записи настроения: ${moodRes.map((m) => m[0]).join("; ")}\n';
+              'Основной диагноз: ${p[2] ?? "Не указан"}\n'
+              'Группа здоровья: ${p[3] ?? "—"}\n'
+              '$emkStr\n'
+              'Замеры давления: ${mRes.map((m) => "${_toDouble(m[0]) ?? 0.0}/${_toDouble(m[1]) ?? 0.0}").join(", ")}\n'
+              'Настроение (комменты): ${moodRes.map((m) => m[0]).join("; ")}\n';
         }
       }
 
@@ -67,6 +78,71 @@ void main() async {
       return Response.ok(jsonEncode({'text': response.text ?? 'Не удалось получить ответ.'}));
     } catch (e) {
       stderr.writeln('AI Chat Error: $e');
+      return Response.internalServerError(body: jsonEncode({'error': e.toString()}));
+    }
+  });
+
+  router.post('/ai/analyze-health', (Request req) async {
+    try {
+      final body = jsonDecode(await req.readAsString());
+      final patientId = body['patientId'] as int;
+
+      // 1. Основные данные пациента
+      final pRes = await conn.execute(Sql.named('SELECT name, birth_date, main_diagnosis_mkb, health_group, arrival_purpose FROM patients WHERE id = @id'), parameters: {'id': patientId});
+      if (pRes.isEmpty) return Response.notFound(jsonEncode({'error': 'Patient not found'}));
+      final p = pRes.first;
+
+      // 2. Данные из расширенной ЭМК
+      final emkRes = await conn.execute(Sql.named('SELECT diagnoses, contraindications, treatment_goals, final_recommendations FROM emk WHERE patient_id = @id'), parameters: {'id': patientId});
+      String emkContext = '';
+      if (emkRes.isNotEmpty) {
+        final e = emkRes.first;
+        emkContext = '--- ДАННЫЕ ЭМК ---\n'
+            'Клинические диагнозы: ${e[0] ?? "нет"}\n'
+            'Противопоказания: ${e[1] ?? "нет"}\n'
+            'Цели реабилитации (SMART): ${e[2] ?? "не заданы"}\n'
+            'Итоговые рекомендации: ${e[3] ?? "нет"}\n';
+      }
+
+      // 3. Динамические замеры и настроение
+      final mRes = await conn.execute(Sql.named('SELECT pressure_systolic, pressure_diastolic, pulse, pain_level, timestamp FROM measurements WHERE patient_id = @id ORDER BY timestamp DESC LIMIT 10'), parameters: {'id': patientId});
+      final moodRes = await conn.execute(Sql.named('SELECT score, comment, timestamp FROM mood_entries WHERE patient_id = @id ORDER BY timestamp DESC LIMIT 5'), parameters: {'id': patientId});
+
+      String medicalContext = 'ПАЦИЕНТ: ${p[0]}\n'
+          'Основной диагноз: ${p[2] ?? "Не указан"}\n'
+          'Группа здоровья: ${p[3] ?? "Не указана"}\n'
+          'Цель заезда: ${p[4] ?? "Не указана"}\n'
+          '$emkContext\n'
+          'ПОСЛЕДНИЕ ЗАМЕРЫ (АД, Пульс, Боль): ${mRes.map((m) => "${m[0]}/${m[1]}, P:${m[2]}, Pain:${m[3]}").join("; ")}\n'
+          'ПОСЛЕДНЕЕ НАСТРОЕНИЕ: ${moodRes.map((m) => "Оценка:${m[0]}, Коммент:${m[1]}").join("; ")}\n';
+
+      final model = GenerativeModel(
+        model: 'gemini-3.1-flash-lite',
+        apiKey: _aiApiKey,
+        systemInstruction: Content.system('Вы — ведущий медицинский эксперт-реабилитолог санатория. Проанализируйте клиническую картину из ЭМК в сочетании с динамикой замеров. Дайте краткое резюме (3-4 предложения) и 3 максимально конкретных совета по лечению или режиму. Используйте русский язык. Формат ответа: JSON с полями "summary" (string) и "recommendations" (list of strings).'),
+      );
+
+      final response = await model.generateContent([Content.text('Проанализируй состояние пациента и данные его медкарты:\n$medicalContext')]);
+      final text = response.text ?? '';
+      
+      String cleanJson = text;
+      if (text.contains('```json')) {
+        cleanJson = text.split('```json')[1].split('```')[0].trim();
+      } else if (text.contains('```')) {
+        cleanJson = text.split('```')[1].split('```')[0].trim();
+      }
+
+      try {
+        final parsed = jsonDecode(cleanJson);
+        return Response.ok(jsonEncode(parsed));
+      } catch (e) {
+        return Response.ok(jsonEncode({
+          'summary': text,
+          'recommendations': ['Следуйте назначениям врача', 'Соблюдайте режим покоя', 'Продолжайте мониторинг']
+        }));
+      }
+    } catch (e) {
+      stderr.writeln('Health Analysis Error: $e');
       return Response.internalServerError(body: jsonEncode({'error': e.toString()}));
     }
   });

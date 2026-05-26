@@ -45,7 +45,8 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   List<Appointment> _appointments = [];
   List<QuestionnaireResult> _qResults = [];
   List<Doctor> _allDoctors = [];
-  String _trend = 'Загрузка...';
+  String _aiSummary = 'Загрузка анализа...';
+  List<String> _aiRecommendations = [];
   bool _isMoodExpanded = false;
   bool _isAppointmentsExpanded = false;
   bool _isQuestionnaireExpanded = false;
@@ -161,7 +162,16 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
           _qResults = qres;
           _allDoctors = docs;
           _assignedDoctor = assignedDoc;
-          _trend = AIService.analyzeTrend(m);
+        });
+
+        // Загружаем продвинутый анализ асинхронно
+        AIService.getAdvancedHealthAnalysis(widget.patient.id!).then((analysis) {
+          if (mounted) {
+            setState(() {
+              _aiSummary = analysis['summary'] ?? 'Нет данных для анализа.';
+              _aiRecommendations = List<String>.from(analysis['recommendations'] ?? []);
+            });
+          }
         });
       }
     } catch (e) {
@@ -906,27 +916,74 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
 
   Widget _buildAICard({bool centeredTitle = false}) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Card(
       elevation: 0,
-      color: Theme.of(context).brightness == Brightness.dark ? colorScheme.primaryContainer.withValues(alpha: 0.1) : colorScheme.primaryContainer.withValues(alpha: 0.4),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      color: isDark ? colorScheme.primaryContainer.withValues(alpha: 0.1) : colorScheme.primaryContainer.withValues(alpha: 0.2),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.2)),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.psychology_rounded, color: colorScheme.primary), 
-                  const SizedBox(width: 12), 
-                  Text(centeredTitle ? 'ИИ помощник' : 'Анализ ИИ', style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.primary, fontSize: 16)),
-                ],
-              ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.psychology_rounded, color: colorScheme.primary, size: 24),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  centeredTitle ? 'ИИ помощник "РеСтарт"' : 'Анализ ИИ',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.primary, fontSize: 18),
+                ),
+                const Spacer(),
+                if (_aiSummary == 'Загрузка анализа...')
+                  const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+              ],
             ),
-            const SizedBox(height: 12),
-            Text(_trend, style: const TextStyle(height: 1.4)),
+            const SizedBox(height: 20),
+            Text(
+              _aiSummary,
+              style: const TextStyle(height: 1.5, fontSize: 15),
+            ),
+            if (_aiRecommendations.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Text(
+                'РЕКОМЕНДАЦИИ:',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  color: colorScheme.primary,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ..._aiRecommendations.map((rec) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.check_circle_outline_rounded, color: colorScheme.primary, size: 18),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        rec,
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+            ],
           ],
         ),
       ),
