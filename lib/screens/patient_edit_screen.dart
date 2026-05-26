@@ -230,7 +230,7 @@ class _PatientEditScreenState extends State<PatientEditScreen> {
             _buildTextField(_egiszIdController, 'ID ЕГИСЗ', Icons.fingerprint_rounded),
             _buildTextField(_fssReferralIdController, 'ID направления ФСС', Icons.link_rounded),
             SwitchListTile(
-              title: const Text('Сактивирован в ЕГИСЗ'),
+              title: const Text('Передано в ЕГИСЗ'),
               secondary: const Icon(Icons.verified_user_rounded),
               value: _isEgiszActivated,
               onChanged: (v) => setState(() => _isEgiszActivated = v),
