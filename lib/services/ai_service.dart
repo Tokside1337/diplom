@@ -15,7 +15,13 @@ mixin AIConfig {
     return 'http://localhost:8080';
   }
 
-  Map<String, String> get headers => {'Content-Type': 'application/json'};
+  Map<String, String> get headers {
+    final h = {'Content-Type': 'application/json'};
+    if (AIService.token != null) {
+      h['Authorization'] = 'Bearer ${AIService.token}';
+    }
+    return h;
+  }
 }
 
 /// Сервис для взаимодействия с удаленным ИИ через бэкенд
@@ -23,6 +29,9 @@ class AIService with AIConfig {
   static final AIService _instance = AIService._internal();
   factory AIService() => _instance;
   AIService._internal();
+
+  static String? token;
+  static void setToken(String? t) => token = t;
 
   /// Чат с ИИ-консультантом
   static Future<String> chatWithAI(String message, int patientId, {bool isDoctor = false}) async {

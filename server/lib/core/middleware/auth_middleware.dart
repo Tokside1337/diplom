@@ -8,8 +8,8 @@ Middleware authMiddleware() {
     return (Request request) async {
       final path = request.url.path;
       
-      // Allow auth routes and root
-      if (path == 'login' || path == 'register' || path == '' || path == '/') {
+      // Allow auth routes, AI routes and root
+      if (path == 'login' || path == 'register' || path.startsWith('ai/') || path == '' || path == '/') {
         return await innerHandler(request);
       }
 

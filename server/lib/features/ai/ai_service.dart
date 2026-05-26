@@ -39,7 +39,7 @@ class AiService {
     }
 
     final model = GenerativeModel(
-      model: 'gemini-1.5-flash',
+      model: 'gemini-3.1-flash-lite',
       apiKey: AppConfig.aiApiKey,
       systemInstruction: Content.system(isDoctor ? AiPrompts.doctorPrompt : AiPrompts.patientPrompt),
     );
@@ -70,7 +70,7 @@ class AiService {
         'ПОСЛЕДНЕЕ НАСТРОЕНИЕ: ${moods.reversed.take(5).map((m) => "Оценка:${m.score}, Коммент:${m.comment}").join("; ")}\n';
 
     final model = GenerativeModel(
-      model: 'gemini-1.5-flash',
+      model: 'gemini-3.1-flash-lite',
       apiKey: AppConfig.aiApiKey,
       systemInstruction: Content.system(AiPrompts.analysisInstruction),
     );

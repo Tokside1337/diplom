@@ -7,6 +7,7 @@ import 'package:diplom/models/user.dart';
 import 'package:diplom/models/medical_models.dart';
 import 'package:diplom/models/doctor.dart';
 import 'package:diplom/models/emk_model.dart';
+import 'package:diplom/services/ai_service.dart';
 
 /// Базовая логика сетевых запросов
 mixin ApiClient {
@@ -28,7 +29,10 @@ mixin ApiClient {
     return h;
   }
 
-  void setToken(String? token) => _token = token;
+  void setToken(String? token) {
+    _token = token;
+    AIService.setToken(token);
+  }
 
   Future<http.Response?> _safeRequest(Future<http.Response> Function() request, String label) async {
     try {
@@ -37,7 +41,7 @@ mixin ApiClient {
         return response;
       }
       debugPrint('API Error [$label]: ${response.statusCode} ${response.body}');
-      return response; // Return even error response for status check
+      return response; 
     } catch (e) {
       debugPrint('Network Error [$label]: $e');
     }
