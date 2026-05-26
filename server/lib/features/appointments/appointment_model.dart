@@ -7,7 +7,7 @@ class AppointmentModel {
   final String room;
   final String doctor;
   final String status;
-  final String? patientName; // For schedule view
+  final String? patientName;
 
   AppointmentModel({
     this.id,
@@ -24,7 +24,7 @@ class AppointmentModel {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'patientId': patientId,
+      'patient_id': patientId,
       'type': type,
       'title': title,
       'time': time,
@@ -44,12 +44,12 @@ class AppointmentModel {
   factory AppointmentModel.fromMap(Map<String, dynamic> map) {
     return AppointmentModel(
       id: map['id'],
-      patientId: map['patient_id'] ?? map['patientId'],
-      type: map['type'],
-      title: map['title'],
+      patientId: map['patient_id'] ?? map['patientId'] ?? 0,
+      type: map['type'] ?? '',
+      title: map['title'] ?? '',
       time: _formatDate(map['time']),
-      room: map['room'],
-      doctor: map['doctor'],
+      room: map['room'] ?? '',
+      doctor: map['doctor'] ?? '',
       status: map['status'] ?? 'pending',
       patientName: map['patient_name'],
     );

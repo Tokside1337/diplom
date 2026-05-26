@@ -18,7 +18,7 @@ class MoodModel {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'patientId': patientId,
+      'patient_id': patientId,
       'score': score,
       'comment': comment,
       'timestamp': timestamp,
@@ -35,9 +35,9 @@ class MoodModel {
   factory MoodModel.fromMap(Map<String, dynamic> map) {
     return MoodModel(
       id: map['id'],
-      patientId: map['patient_id'] ?? map['patientId'],
-      score: map['score'],
-      comment: map['comment'],
+      patientId: map['patient_id'] ?? map['patientId'] ?? 0,
+      score: map['score'] ?? 0,
+      comment: map['comment'] ?? '',
       timestamp: _formatDate(map['timestamp']),
       sentiment: map['sentiment'],
     );

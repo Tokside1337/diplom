@@ -18,10 +18,10 @@ class ReminderModel {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'patientId': patientId,
-      'doctorId': doctorId,
+      'patient_id': patientId,
+      'doctor_id': doctorId,
       'message': message,
-      'isRead': isRead,
+      'is_read': isRead,
       'timestamp': timestamp,
     };
   }
@@ -35,9 +35,9 @@ class ReminderModel {
   factory ReminderModel.fromMap(Map<String, dynamic> map) {
     return ReminderModel(
       id: map['id'],
-      patientId: map['patient_id'] ?? map['patientId'],
-      doctorId: map['doctor_id'] ?? map['doctorId'],
-      message: map['message'],
+      patientId: map['patient_id'] ?? map['patientId'] ?? 0,
+      doctorId: map['doctor_id'] ?? map['doctorId'] ?? 0,
+      message: map['message'] ?? '',
       isRead: map['is_read'] ?? map['isRead'] ?? false,
       timestamp: _formatDate(map['timestamp']),
     );

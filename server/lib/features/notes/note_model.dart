@@ -16,7 +16,7 @@ class NoteModel {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'patientId': patientId,
+      'patient_id': patientId,
       'author': author,
       'content': content,
       'timestamp': timestamp,
@@ -32,9 +32,9 @@ class NoteModel {
   factory NoteModel.fromMap(Map<String, dynamic> map) {
     return NoteModel(
       id: map['id'],
-      patientId: map['patient_id'] ?? map['patientId'],
-      author: map['author'],
-      content: map['content'],
+      patientId: map['patient_id'] ?? map['patientId'] ?? 0,
+      author: map['author'] ?? '',
+      content: map['content'] ?? '',
       timestamp: _formatDate(map['timestamp']),
     );
   }

@@ -18,7 +18,7 @@ class HospitalizationModel {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'patientId': patientId,
+      'patient_id': patientId,
       'admission_date': admissionDate,
       'discharge_date': dischargeDate,
       'reason': reason,
@@ -35,11 +35,11 @@ class HospitalizationModel {
   factory HospitalizationModel.fromMap(Map<String, dynamic> map) {
     return HospitalizationModel(
       id: map['id'],
-      patientId: map['patient_id'] ?? map['patientId'],
+      patientId: map['patient_id'] ?? map['patientId'] ?? 0,
       admissionDate: _formatDate(map['admission_date'] ?? map['admissionDate']),
       dischargeDate: _formatDate(map['discharge_date'] ?? map['dischargeDate']),
-      reason: map['reason'],
-      department: map['department'],
+      reason: map['reason'] ?? '',
+      department: map['department'] ?? '',
     );
   }
 }

@@ -16,9 +16,9 @@ class QuestionnaireModel {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'patientId': patientId,
+      'patient_id': patientId,
       'title': title,
-      'totalScore': totalScore,
+      'total_score': totalScore,
       'date': date,
     };
   }
@@ -32,9 +32,9 @@ class QuestionnaireModel {
   factory QuestionnaireModel.fromMap(Map<String, dynamic> map) {
     return QuestionnaireModel(
       id: map['id'],
-      patientId: map['patient_id'] ?? map['patientId'],
-      title: map['title'],
-      totalScore: map['total_score'] ?? map['totalScore'],
+      patientId: map['patient_id'] ?? map['patientId'] ?? 0,
+      title: map['title'] ?? '',
+      totalScore: map['total_score'] ?? map['totalScore'] ?? 0,
       date: _formatDate(map['date']),
     );
   }

@@ -50,14 +50,14 @@ class EmkModel {
   factory EmkModel.fromMap(Map<String, dynamic> map) {
     return EmkModel(
       id: map['id']?.toString(),
-      patientId: map['patient_id'],
+      patientId: map['patient_id'] ?? map['patientId'] ?? 0,
       status: map['status'] ?? 'active',
       diagnoses: map['diagnoses'],
       contraindications: map['contraindications'],
-      treatmentGoals: map['treatment_goals'],
-      dailyLogs: map['daily_logs'],
-      stageReviews: map['stage_reviews'],
-      finalRecommendations: map['final_recommendations'],
+      treatmentGoals: map['treatment_goals'] ?? map['treatmentGoals'],
+      dailyLogs: map['daily_logs'] ?? map['dailyLogs'],
+      stageReviews: map['stage_reviews'] ?? map['stageReviews'],
+      finalRecommendations: map['final_recommendations'] ?? map['finalRecommendations'],
       createdAt: _formatDate(map['created_at']),
       updatedAt: _formatDate(map['updated_at']),
     );

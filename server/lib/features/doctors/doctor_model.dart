@@ -26,8 +26,8 @@ class DoctorModel {
   factory DoctorModel.fromMap(Map<String, dynamic> map) {
     return DoctorModel(
       id: map['id'],
-      name: map['name'],
-      specialization: map['specialization'],
+      name: map['name'] ?? '',
+      specialization: map['specialization'] ?? '',
       phone: map['phone'],
       cabinet: map['cabinet'],
     );

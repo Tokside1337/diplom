@@ -20,11 +20,11 @@ class MeasurementModel {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'patientId': patientId,
-      'pressureSystolic': pressureSystolic,
-      'pressureDiastolic': pressureDiastolic,
+      'patient_id': patientId,
+      'pressure_systolic': pressureSystolic,
+      'pressure_diastolic': pressureDiastolic,
       'pulse': pulse,
-      'painLevel': painLevel,
+      'pain_level': painLevel,
       'timestamp': timestamp,
     };
   }
@@ -38,11 +38,11 @@ class MeasurementModel {
   factory MeasurementModel.fromMap(Map<String, dynamic> map) {
     return MeasurementModel(
       id: map['id'],
-      patientId: map['patient_id'] ?? map['patientId'],
+      patientId: map['patient_id'] ?? map['patientId'] ?? 0,
       pressureSystolic: (map['pressure_systolic'] ?? map['pressureSystolic'] as num).toDouble(),
       pressureDiastolic: (map['pressure_diastolic'] ?? map['pressureDiastolic'] as num).toDouble(),
-      pulse: map['pulse'],
-      painLevel: map['pain_level'] ?? map['painLevel'],
+      pulse: map['pulse'] ?? 0,
+      painLevel: map['pain_level'] ?? map['painLevel'] ?? 0,
       timestamp: _formatDate(map['timestamp']),
     );
   }
