@@ -44,9 +44,12 @@ class User {
   factory User.fromMap(Map<String, dynamic> map) {
     return User(
       id: map['id'],
-      login: map['login'],
-      password: map['password'],
-      role: UserRole.values.firstWhere((e) => e.name == map['role']),
+      login: map['login'] ?? '',
+      password: map['password'] ?? '',
+      role: UserRole.values.firstWhere(
+        (e) => e.name == map['role'],
+        orElse: () => UserRole.patient,
+      ),
       patientId: map['patient_id'],
       doctorId: map['doctor_id'],
     );
