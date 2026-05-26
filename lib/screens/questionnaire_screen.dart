@@ -76,7 +76,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withOpacity(0.2),
+        color: colorScheme.primaryContainer.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(20),
       ),
       child: const Text(
@@ -93,7 +93,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
       margin: const EdgeInsets.only(bottom: 20),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.4)),
+        side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.4)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -122,10 +122,10 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: isSelected ? colorScheme.primary : colorScheme.outlineVariant.withOpacity(0.3),
+                        color: isSelected ? colorScheme.primary : colorScheme.outlineVariant.withValues(alpha: 0.3),
                         width: isSelected ? 2 : 1,
                       ),
-                      color: isSelected ? colorScheme.primaryContainer.withOpacity(0.1) : null,
+                      color: isSelected ? colorScheme.primaryContainer.withValues(alpha: 0.1) : null,
                     ),
                     child: Row(
                       children: [

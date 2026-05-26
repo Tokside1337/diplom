@@ -10,7 +10,7 @@ const String _dbHost = 'localhost';
 const int _dbPort = 5432;
 const String _dbName = 'rehab_db';
 const String _dbUser = 'postgres';
-const String _dbPass = '12345';
+const String _dbPass = '1337';
 const String _aiApiKey = 'AIzaSyDAz3E57uUFa1wGarxoBa0GMPAdP5bbq00';
 
 late Connection conn;
@@ -120,7 +120,32 @@ void main() async {
   });
 
   router.delete('/users/<id>', (Request req, String id) async {
-    await conn.execute(Sql.named('DELETE FROM users WHERE id = @id'), parameters: {'id': int.parse(id)});
+    final userId = int.parse(id);
+    
+    // Получаем информацию о пользователе перед удалением, чтобы знать, какие профили удалять
+    final res = await conn.execute(
+      Sql.named('SELECT role, patient_id, doctor_id FROM users WHERE id = @id'),
+      parameters: {'id': userId},
+    );
+
+    if (res.isNotEmpty) {
+      final r = res.first;
+      final role = r[0] as String;
+      final pId = r[1] as int?;
+      final dId = r[2] as int?;
+
+      // Если это пациент или доктор, удаляем их профили
+      // Каскадное удаление в БД позаботится о связанных измерениях, записях ЭМК и т.д.
+      if (role == 'patient' && pId != null) {
+        await conn.execute(Sql.named('DELETE FROM patients WHERE id = @id'), parameters: {'id': pId});
+      } else if (role == 'doctor' && dId != null) {
+        await conn.execute(Sql.named('DELETE FROM doctors WHERE id = @id'), parameters: {'id': dId});
+      }
+    }
+
+    // Удаляем самого пользователя (если он еще не удален каскадом, хотя внешние ключи в users настроены на SET NULL)
+    await conn.execute(Sql.named('DELETE FROM users WHERE id = @id'), parameters: {'id': userId});
+
     return Response.ok('Deleted');
   });
 

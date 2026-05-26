@@ -144,6 +144,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
     final buildingController = TextEditingController();
     final arrivalPurposeController = TextEditingController();
     final fundingSourceController = TextEditingController();
+    String? selectedGender;
     int? selectedDoctorId;
 
     int? profileId = patient?.id ?? doctor?.id ?? (targetUser?.role == UserRole.doctor ? targetUser?.doctorId : targetUser?.patientId);
@@ -159,6 +160,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
       buildingController.text = patient.building ?? '';
       arrivalPurposeController.text = patient.arrivalPurpose ?? '';
       fundingSourceController.text = patient.fundingSource ?? '';
+      selectedGender = patient.gender;
       selectedDoctorId = patient.doctorId;
     } else if (doctor != null) {
       nameController.text = doctor.name;
@@ -307,6 +309,24 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                       ),
                     ],
                     if (selectedRole == UserRole.patient) ...[
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String?>(
+                        initialValue: selectedGender,
+                        isExpanded: true,
+                        isDense: true,
+                        decoration: InputDecoration(
+                          labelText: 'Пол',
+                          prefixIcon: const Icon(Icons.wc_rounded, size: 20),
+                          filled: true,
+                          fillColor: colorScheme.surfaceContainerHighest.withAlpha(76),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'Мужской', child: Text('Мужской')),
+                          DropdownMenuItem(value: 'Женский', child: Text('Женский')),
+                        ],
+                        onChanged: (val) => setDialogState(() => selectedGender = val),
+                      ),
                       const SizedBox(height: 12),
                       _buildField(
                         controller: birthDateController,
@@ -463,6 +483,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                       id: profileId,
                       name: nameController.text.trim(),
                       birthDate: birthDateController.text.trim(),
+                      gender: selectedGender,
                       relativeContact: contactController.text.trim().isEmpty ? 'Не указан' : contactController.text.trim(),
                       doctorId: selectedDoctorId,
                       snils: snilsController.text.trim(),
@@ -592,7 +613,27 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
         leading: CircleAvatar(backgroundColor: colorScheme.surfaceContainerHighest, child: Icon(Icons.account_circle_outlined, color: colorScheme.primary)),
         title: Text(user.login, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text('Роль: ${user.role.displayName}'),
-        trailing: IconButton(icon: const Icon(Icons.edit_outlined), onPressed: () => _showUserDialog(user: user)),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(icon: const Icon(Icons.edit_outlined), onPressed: () => _showUserDialog(user: user)),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              onPressed: () async {
+                if (user.login == 'admin') {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Нельзя удалить главного администратора'))
+                  );
+                  return;
+                }
+                if (await _confirmDelete('Удаление', 'Удалить аккаунт ${user.login} и все связанные данные?')) {
+                  await _dbService.deleteUser(user.id!);
+                  _loadData();
+                }
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

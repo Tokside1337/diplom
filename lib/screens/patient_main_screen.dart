@@ -267,65 +267,78 @@ class _ProfileTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('Мой профиль')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Center(
-            child: Stack(
-              children: [
-                CircleAvatar(radius: 54, backgroundColor: colorScheme.primaryContainer, child: Icon(Icons.person_rounded, size: 54, color: colorScheme.onPrimaryContainer)),
-                Positioned(bottom: 0, right: 0, child: CircleAvatar(backgroundColor: colorScheme.primary, radius: 18, child: Icon(Icons.camera_alt_rounded, color: colorScheme.onPrimary, size: 18))),
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
-          _buildProfileCard(context, [
+          _buildInfoSection(context, 'ЛИЧНЫЕ ДАННЫЕ', [
             _ProfileItem(Icons.badge_outlined, 'ФИО', patient.name),
             _ProfileItem(Icons.cake_outlined, 'Дата рождения', patient.birthDate),
-            _ProfileItem(Icons.family_restroom_outlined, 'Контакт близких', patient.relativeContact),
+            _ProfileItem(Icons.wc_rounded, 'Пол', patient.gender ?? 'Не указан'),
+            _ProfileItem(Icons.fingerprint_rounded, 'СНИЛС', patient.snils ?? 'Не указан'),
+            _ProfileItem(Icons.description_outlined, 'Паспорт', patient.passportData ?? 'Не указан'),
+            _ProfileItem(Icons.phone_android_rounded, 'Телефон', patient.phone ?? 'Не указан'),
           ]),
-          const SizedBox(height: 24),
-          Text('Медицинская история', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5))),
-            child: const ListTile(
-              leading: Icon(Icons.history_rounded, color: Colors.blue),
-              title: Text('История госпитализаций'),
-              subtitle: Text('Записей пока нет'),
-              trailing: Icon(Icons.chevron_right_rounded),
-            ),
-          ),
+          const SizedBox(height: 16),
+          _buildInfoSection(context, 'САНАТОРНО-КУРОРТНАЯ КАРТА', [
+            _ProfileItem(Icons.history_edu_rounded, 'Номер СКК', patient.skkNumber ?? '—'),
+            _ProfileItem(Icons.calendar_month_rounded, 'Дата выдачи', patient.skkDate ?? '—'),
+            _ProfileItem(Icons.account_balance_rounded, 'Кем выдана', patient.issuedByLpu ?? '—'),
+            _ProfileItem(Icons.medical_services_rounded, 'Диагноз (МКБ)', patient.mainDiagnosisMkb ?? '—'),
+            _ProfileItem(Icons.restaurant_rounded, 'Диет. стол', patient.dietTable ?? 'Стандарт'),
+            _ProfileItem(Icons.directions_run_rounded, 'Режим', patient.mobilityRegime ?? 'Общий'),
+          ]),
+          const SizedBox(height: 16),
+          _buildInfoSection(context, 'РАЗМЕЩЕНИЕ', [
+            _ProfileItem(Icons.apartment_rounded, 'Корпус / Этаж', '${patient.building ?? '—'} / ${patient.floor ?? '—'}'),
+            _ProfileItem(Icons.meeting_room_rounded, 'Номер палаты', patient.roomNumber ?? '—'),
+            _ProfileItem(Icons.hotel_class_rounded, 'Категория', patient.roomCategory ?? '—'),
+            _ProfileItem(Icons.login_rounded, 'Заезд (план)', patient.plannedArrival ?? '—'),
+            _ProfileItem(Icons.logout_rounded, 'Выезд (план)', patient.plannedDeparture ?? '—'),
+          ]),
+          const SizedBox(height: 16),
+          _buildInfoSection(context, 'ДОПОЛНИТЕЛЬНО', [
+            _ProfileItem(Icons.family_restroom_rounded, 'Контакт близких', patient.relativeContact),
+            _ProfileItem(Icons.supervisor_account_rounded, 'Сопровождающий', patient.companionData ?? 'Нет'),
+            _ProfileItem(Icons.credit_card_rounded, 'Источник фин.', patient.fundingSource ?? '—'),
+          ]),
+          const SizedBox(height: 32),
         ],
       ),
     );
   }
 
-  Widget _buildProfileCard(BuildContext context, List<_ProfileItem> items) {
+  Widget _buildInfoSection(BuildContext context, String title, List<_ProfileItem> items) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5))),
-      child: Column(
-        children: items.asMap().entries.map((entry) {
-          final idx = entry.key;
-          final item = entry.value;
-          return Column(
-            children: [
-              ListTile(
-                leading: Icon(item.icon, color: colorScheme.primary),
-                title: Text(item.label, style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant)),
-                subtitle: Text(item.value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
-              if (idx < items.length - 1) Divider(indent: 56, endIndent: 16, height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
-            ],
-          );
-        }).toList(),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 12, bottom: 8),
+          child: Text(title, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colorScheme.primary, letterSpacing: 1.1)),
+        ),
+        Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5))),
+          child: Column(
+            children: items.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final item = entry.value;
+              return Column(
+                children: [
+                  ListTile(
+                    leading: Icon(item.icon, color: colorScheme.primary, size: 20),
+                    title: Text(item.label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                    subtitle: Text(item.value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+                  ),
+                  if (idx < items.length - 1) Divider(indent: 56, endIndent: 16, height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ],
     );
   }
 }

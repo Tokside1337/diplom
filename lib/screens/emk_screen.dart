@@ -18,27 +18,159 @@ class EMKScreen extends StatefulWidget {
 class _EMKScreenState extends State<EMKScreen> {
   final _dbService = DatabaseService();
   EMK? _emk;
+  late Patient _patient;
   bool _isLoading = true;
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _loadEMK();
+    _patient = widget.patient;
+    _loadData();
   }
 
-  Future<void> _loadEMK() async {
+  Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    final emk = await _dbService.getEMK(widget.patient.id!);
-    if (mounted) {
-      setState(() {
-        _emk = emk ??
-            EMK(
-              patientId: widget.patient.id!,
-              createdAt: DateTime.now().toIso8601String(),
-            );
-        _isLoading = false;
-      });
+    try {
+      final emkFuture = _dbService.getEMK(widget.patient.id!);
+      final patientFuture = _dbService.getPatientById(widget.patient.id!);
+      
+      final results = await Future.wait([emkFuture, patientFuture]);
+      
+      if (mounted) {
+        setState(() {
+          _emk = (results[0] as EMK?) ??
+              EMK(
+                patientId: widget.patient.id!,
+                createdAt: DateTime.now().toIso8601String(),
+              );
+          if (results[1] != null) {
+            _patient = results[1] as Patient;
+          }
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка загрузки: $e')));
+      }
     }
+  }
+
+  Future<void> _saveAll() async {
+    if (_emk == null || _isSaving) return;
+    
+    setState(() => _isSaving = true);
+    try {
+      // 1. Save EMK
+      await _dbService.saveEMK(_emk!);
+      
+      // 2. Save Patient (which contains СКК fields)
+      await _dbService.updatePatient(_patient);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Все данные успешно сохранены')));
+        setState(() => _isSaving = false);
+        _loadData();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка сохранения: $e')));
+      }
+    }
+  }
+
+  void _editMedicalField(String label, String? currentValue, Function(String) onUpdate) {
+    final controller = TextEditingController(text: currentValue);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Редактировать: $label'),
+        content: TextField(
+          controller: controller, 
+          maxLines: 3,
+          decoration: InputDecoration(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
+          FilledButton(
+            onPressed: () {
+              final newValue = controller.text.trim();
+              setState(() {
+                onUpdate(newValue);
+              });
+              Navigator.pop(context);
+            },
+            child: const Text('Готово'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _editEMKField(Map<String, dynamic> section, String field) {
+    final controller = TextEditingController(text: section[field]?.toString());
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Редактировать: $field'),
+        content: TextField(
+          controller: controller, 
+          maxLines: 3,
+          decoration: InputDecoration(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
+          FilledButton(
+            onPressed: () {
+              setState(() {
+                section[field] = controller.text.trim();
+              });
+              Navigator.pop(context);
+            },
+            child: const Text('Готово'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _addEMKLogEntry(List<dynamic> list) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Новая запись'),
+        content: TextField(
+          controller: controller, 
+          maxLines: 3, 
+          decoration: InputDecoration(
+            hintText: 'Введите данные осмотра...',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
+          FilledButton(
+            onPressed: () {
+              if (controller.text.trim().isNotEmpty) {
+                setState(() {
+                  list.add('${DateFormat('dd.MM HH:mm').format(DateTime.now())}: ${controller.text.trim()}');
+                });
+              }
+              Navigator.pop(context);
+            },
+            child: const Text('Добавить'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -48,21 +180,21 @@ class _EMKScreenState extends State<EMKScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('ЭМК: ${widget.patient.name}'),
+        title: Text('ЭМК: ${_patient.name}'),
         actions: [
           IconButton(
             icon: const Icon(Icons.print_rounded),
-            onPressed: () => PdfService.printEMK(_emk!, widget.patient),
+            onPressed: () => PdfService.printEMK(_emk!, _patient),
             tooltip: 'Печать ЭМК',
           ),
           if (widget.isDoctor)
-            IconButton(
-              icon: const Icon(Icons.save_rounded),
-              onPressed: () async {
-                await _dbService.saveEMK(_emk!);
-                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ЭМК сохранена')));
-              },
-            )
+            _isSaving 
+              ? const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))))
+              : IconButton(
+                  icon: const Icon(Icons.save_rounded, color: Colors.blue),
+                  onPressed: _saveAll,
+                  tooltip: 'Сохранить все изменения',
+                )
         ],
       ),
       body: Center(
@@ -71,55 +203,133 @@ class _EMKScreenState extends State<EMKScreen> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              _buildSection('0. САНАТОРНО-КУРОРТНАЯ КАРТА (СКК)', {
-                'Номер СКК': widget.patient.skkNumber,
-                'Дата выдачи': widget.patient.skkDate,
-                'Кем выдана': widget.patient.issuedByLpu,
-                'Основной диагноз (МКБ)': widget.patient.mainDiagnosisMkb,
-                'Группа здоровья': widget.patient.healthGroup,
-                'Стол питания': widget.patient.dietTable,
-                'Режим': widget.patient.mobilityRegime,
-              }, [
-                'Номер СКК',
-                'Дата выдачи',
-                'Кем выдана',
-                'Основной диагноз (МКБ)',
-                'Группа здоровья',
-                'Стол питания',
-                'Режим'
-              ]),
-              _buildSection('1. ДИАГНОЗЫ', _emk!.diagnoses, [
+              _buildMedicalInfoSection(),
+              _buildSection('2. ДИАГНОЗЫ (КЛИНИЧЕСКИЕ)', _emk!.diagnoses, [
                 'Основной диагноз',
                 'Сопутствующие',
                 'Осложнения',
                 'Направление',
                 'Функциональный (МКФ)'
               ]),
-              _buildSection('2. ПРОТИВОПОКАЗАНИЯ', _emk!.contraindications, [
+              _buildSection('3. ПРОТИВОПОКАЗАНИЯ (БЛОКИРОВКА)', _emk!.contraindications, [
                 'Абсолютные',
                 'Относительные',
                 'Аллергены',
                 'Запрещенные процедуры IDs',
                 'Макс. нагрузка (кг)'
               ]),
-              _buildSection('3. ЦЕЛИ ЛЕЧЕНИЯ', _emk!.treatmentGoals, [
+              _buildSection('4. ЦЕЛИ ЛЕЧЕНИЯ (SMART)', _emk!.treatmentGoals, [
                 'Потенциал (high/medium/low)',
                 'SMART-цели',
                 'Шкалы на входе (MRC, Berg, Barthel)',
                 'Приоритеты'
               ]),
-              _buildListSection('4.1 ЕЖЕДНЕВНЫЕ ЗАПИСИ', _emk!.dailyLogs),
-              _buildListSection('4.2 ЭТАПНЫЕ ОСМОТРЫ', _emk!.stageReviews),
-              _buildSection('5. ИТОГОВЫЕ РЕКОМЕНДАЦИИ', _emk!.finalRecommendations, [
+              _buildListSection('5.1 ЕЖЕДНЕВНЫЕ ЗАПИСИ (ДНЕВНИК)', _emk!.dailyLogs),
+              _buildListSection('5.2 ЭТАПНЫЕ ОСМОТРЫ', _emk!.stageReviews),
+              _buildSection('6. ИТОГОВЫЕ РЕКОМЕНДАЦИИ', _emk!.finalRecommendations, [
                 'Эпикриз',
                 'Итоговый статус',
                 'Домашний режим',
                 'Лекарства'
               ]),
+              const SizedBox(height: 80),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildMedicalInfoSection() {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 20),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text('1. САНАТОРНО-КУРОРТНАЯ КАРТА (СКК)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blue)),
+          ),
+          _buildMedicalTile('Номер СКК', _patient.skkNumber, Icons.history_edu_rounded, 'skkNumber'),
+          _buildMedicalTile('Дата выдачи', _patient.skkDate, Icons.calendar_month_rounded, 'skkDate'),
+          _buildMedicalTile('Кем выдана', _patient.issuedByLpu, Icons.account_balance_rounded, 'issuedByLpu'),
+          _buildMedicalTile('Основной диагноз (МКБ)', _patient.mainDiagnosisMkb, Icons.medical_services_rounded, 'mainDiagnosisMkb'),
+          _buildMedicalTile('Диет. стол (по Певзнеру)', _patient.dietTable, Icons.restaurant_rounded, 'dietTable'),
+          _buildMedicalTile('Двигательный режим', _patient.mobilityRegime, Icons.directions_run_rounded, 'mobilityRegime'),
+          _buildMedicalTile('Группа здоровья', _patient.healthGroup, Icons.health_and_safety_rounded, 'healthGroup'),
+          _buildMedicalTile('Запрещенные процедуры', _patient.forbiddenProcedures, Icons.block_rounded, 'forbiddenProcedures'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMedicalTile(String label, String? value, IconData icon, String fieldName) {
+    return ListTile(
+      leading: Icon(icon, size: 20, color: Colors.blue[700]),
+      title: Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+      subtitle: Text(value ?? '—', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+      trailing: widget.isDoctor ? const Icon(Icons.edit_rounded, size: 18) : null,
+      onTap: widget.isDoctor ? () => _editMedicalField(label, value, (val) {
+        _patient = _updatePatientLocalField(_patient, fieldName, val);
+      }) : null,
+    );
+  }
+
+  Patient _updatePatientLocalField(Patient p, String fieldName, String value) {
+    return Patient(
+      id: p.id,
+      name: p.name,
+      birthDate: p.birthDate,
+      relativeContact: p.relativeContact,
+      doctorId: p.doctorId,
+      gender: p.gender,
+      snils: p.snils,
+      passportData: p.passportData,
+      phone: p.phone,
+      representativeData: p.representativeData,
+      photoPath: p.photoPath,
+      skkNumber: fieldName == 'skkNumber' ? value : p.skkNumber,
+      skkDate: fieldName == 'skkDate' ? value : p.skkDate,
+      issuedByLpu: fieldName == 'issuedByLpu' ? value : p.issuedByLpu,
+      mainDiagnosisMkb: fieldName == 'mainDiagnosisMkb' ? value : p.mainDiagnosisMkb,
+      secondaryDiagnosesMkb: p.secondaryDiagnosesMkb,
+      checkInExamination: fieldName == 'checkInExamination' ? value : p.checkInExamination,
+      healthGroup: fieldName == 'healthGroup' ? value : p.healthGroup,
+      dietTable: fieldName == 'dietTable' ? value : p.dietTable,
+      forbiddenProcedures: fieldName == 'forbiddenProcedures' ? value : p.forbiddenProcedures,
+      mobilityRegime: fieldName == 'mobilityRegime' ? value : p.mobilityRegime,
+      status: p.status,
+      arrivalPurpose: p.arrivalPurpose,
+      fundingSource: p.fundingSource,
+      sanatoriumProfile: p.sanatoriumProfile,
+      plannedArrival: p.plannedArrival,
+      plannedDeparture: p.plannedDeparture,
+      actualArrival: p.actualArrival,
+      actualDeparture: p.actualDeparture,
+      roomNumber: p.roomNumber,
+      building: p.building,
+      floor: p.floor,
+      bedDaysCount: p.bedDaysCount,
+      roomCategory: p.roomCategory,
+      dietType: p.dietType,
+      specialNeeds: p.specialNeeds,
+      lfkGroup: p.lfkGroup,
+      culturalParticipation: p.culturalParticipation,
+      voucherType: p.voucherType,
+      extraServices: p.extraServices,
+      companionData: p.companionData,
+      treatmentEfficiency: p.treatmentEfficiency,
+      treatmentDurationCategory: p.treatmentDurationCategory,
+      benefitCategory: p.benefitCategory,
+      egiszId: p.egiszId,
+      fssReferralId: p.fssReferralId,
+      isEgiszActivated: p.isEgiszActivated,
+      diagnosis: p.diagnosis,
+      contraindications: p.contraindications,
+      treatmentGoals: p.treatmentGoals,
+      dynamics: p.dynamics,
+      finalRecommendations: p.finalRecommendations,
     );
   }
 
@@ -138,7 +348,7 @@ class _EMKScreenState extends State<EMKScreen> {
                 title: Text(f, style: const TextStyle(fontSize: 12, color: Colors.grey)),
                 subtitle: Text(data[f]?.toString() ?? 'Не заполнено'),
                 trailing: widget.isDoctor ? const Icon(Icons.edit_rounded, size: 18) : null,
-                onTap: widget.isDoctor ? () => _editField(data, f) : null,
+                onTap: widget.isDoctor ? () => _editEMKField(data, f) : null,
               )),
         ],
       ),
@@ -158,7 +368,7 @@ class _EMKScreenState extends State<EMKScreen> {
               children: [
                 Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blue)),
                 if (widget.isDoctor)
-                  IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: () => _addEntry(list))
+                  IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: () => _addEMKLogEntry(list))
               ],
             ),
           ),
@@ -167,50 +377,6 @@ class _EMKScreenState extends State<EMKScreen> {
                 title: Text(item.toString()),
                 dense: true,
               )),
-        ],
-      ),
-    );
-  }
-
-  void _editField(Map<String, dynamic> section, String field) {
-    final controller = TextEditingController(text: section[field]?.toString());
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Редактировать: $field'),
-        content: TextField(controller: controller, maxLines: 3),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
-          FilledButton(
-              onPressed: () {
-                setState(() {
-                  section[field] = controller.text;
-                });
-                Navigator.pop(context);
-              },
-              child: const Text('ОК')),
-        ],
-      ),
-    );
-  }
-
-  void _addEntry(List<dynamic> list) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Новая запись'),
-        content: TextField(controller: controller, maxLines: 3, decoration: const InputDecoration(hintText: 'Введите данные осмотра...')),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
-          FilledButton(
-              onPressed: () {
-                setState(() {
-                  list.add('${DateFormat('dd.MM HH:mm').format(DateTime.now())}: ${controller.text}');
-                });
-                Navigator.pop(context);
-              },
-              child: const Text('Добавить')),
         ],
       ),
     );

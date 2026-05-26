@@ -11,6 +11,7 @@ import 'package:diplom/screens/questionnaire_screen.dart';
 import 'package:diplom/screens/communication_screen.dart';
 import 'package:diplom/screens/login_screen.dart';
 import 'package:diplom/screens/emk_screen.dart';
+import 'package:diplom/screens/patient_edit_screen.dart';
 
 class Recommendation {
   final String text;
@@ -318,7 +319,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: scoreColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(color: scoreColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                 child: Text('Оценка ИИ: ${mood.score}/5', style: TextStyle(color: scoreColor, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: 16),
@@ -715,12 +716,6 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                     style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
                   ),
                   const SizedBox(height: 24),
-                  _buildSectionTitle('Общая информация'),
-                  _buildGeneralInfoCard(),
-                  const SizedBox(height: 24),
-                  _buildSectionTitle('Размещение и Сервис'),
-                  _buildSanatoriumDetailsCard(),
-                  const SizedBox(height: 24),
                   _buildSectionTitle('Рекомендации и Анализ ИИ'),
                   _buildAICard(),
                   const SizedBox(height: 24),
@@ -781,12 +776,19 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildPatientHeader(),
-                  const SizedBox(height: 24),
-                  _buildSectionTitle('Паспортные данные и контакты'),
-                  _buildGeneralInfoCard(),
-                  const SizedBox(height: 24),
-                  _buildSectionTitle('Размещение в санатории'),
-                  _buildSanatoriumDetailsCard(),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: () => Navigator.push(
+                      context, 
+                      MaterialPageRoute(builder: (context) => PatientEditScreen(patient: widget.patient))
+                    ).then((_) => _loadData()),
+                    icon: const Icon(Icons.edit_note_rounded),
+                    label: const Text('Редактировать данные пациента'),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(50),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
                   const SizedBox(height: 24),
                   _buildSectionTitle('Аналитика ИИ и Прогноз'),
                   _buildAICard(centeredTitle: true),
@@ -836,9 +838,9 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
             child: Container(
               height: 64,
               decoration: BoxDecoration(
-                color: isDark ? Colors.black.withOpacity(0.5) : Colors.white.withOpacity(0.6),
+                color: isDark ? Colors.black.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.6),
                 borderRadius: BorderRadius.circular(32),
-                border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.3)),
+                border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: items.asMap().entries.map((entry) {
@@ -847,7 +849,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                   return Expanded(
                     child: Row(
                       children: [
-                        if (idx > 0) VerticalDivider(width: 1, thickness: 1, indent: 20, endIndent: 20, color: colorScheme.outlineVariant.withOpacity(0.5)),
+                        if (idx > 0) VerticalDivider(width: 1, thickness: 1, indent: 20, endIndent: 20, color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
                         Expanded(
                           child: InkWell(
                             onTap: item.onTap,
@@ -875,64 +877,11 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     );
   }
 
-  Widget _buildGeneralInfoCard() {
-    final colorScheme = Theme.of(context).colorScheme;
-    final p = widget.patient;
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.5))),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          children: [
-            _buildDetailRow(Icons.fingerprint_rounded, 'СНИЛС', p.snils ?? 'Не указан'),
-            _buildDetailRow(Icons.badge_outlined, 'Паспорт', p.passportData ?? 'Не указан'),
-            _buildDetailRow(Icons.wc_rounded, 'Пол', p.gender ?? 'Не указан'),
-            _buildDetailRow(Icons.phone_android_rounded, 'Телефон', p.phone ?? 'Не указан'),
-            _buildDetailRow(Icons.family_restroom_rounded, 'Близкие', p.relativeContact),
-            if (p.representativeData != null) _buildDetailRow(Icons.supervisor_account_rounded, 'Представитель', p.representativeData!),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSanatoriumDetailsCard() {
-    final colorScheme = Theme.of(context).colorScheme;
-    final p = widget.patient;
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.5))),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          children: [
-            _buildDetailRow(Icons.meeting_room_rounded, 'Номер / Корпус', '${p.roomNumber ?? '—'} / ${p.building ?? '—'} (${p.floor ?? '—'} эт.)'),
-            _buildDetailRow(Icons.hotel_class_rounded, 'Категория', p.roomCategory ?? 'Не указана'),
-            _buildDetailRow(Icons.restaurant_rounded, 'Питание', p.dietType ?? 'Стандарт'),
-            _buildDetailRow(Icons.calendar_today_rounded, 'Заезд (план/факт)', '${p.plannedArrival ?? '—'} / ${p.actualArrival ?? '—'}'),
-            _buildDetailRow(Icons.event_busy_rounded, 'Выезд (план/факт)', '${p.plannedDeparture ?? '—'} / ${p.actualDeparture ?? '—'}'),
-            _buildDetailRow(Icons.credit_card_rounded, 'Источник / Тип', '${p.fundingSource ?? '—'} / ${p.voucherType ?? '—'}'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(IconData icon, String label, String value) {
-    return ListTile(
-      dense: true,
-      leading: Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
-      title: Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-      subtitle: Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-    );
-  }
-
   Widget _buildPatientHeader() {
     final colorScheme = Theme.of(context).colorScheme;
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.5))),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5))),
       child: Column(
         children: [
           ListTile(
@@ -959,7 +908,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     return Card(
       elevation: 0,
-      color: Theme.of(context).brightness == Brightness.dark ? colorScheme.primaryContainer.withOpacity(0.1) : colorScheme.primaryContainer.withOpacity(0.4),
+      color: Theme.of(context).brightness == Brightness.dark ? colorScheme.primaryContainer.withValues(alpha: 0.1) : colorScheme.primaryContainer.withValues(alpha: 0.4),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -988,7 +937,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     if (_measurements.isEmpty) return const SizedBox();
     return Container(
       height: 220,
-      decoration: BoxDecoration(color: Theme.of(context).cardColor, borderRadius: BorderRadius.circular(20), border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.4))),
+      decoration: BoxDecoration(color: Theme.of(context).cardColor, borderRadius: BorderRadius.circular(20), border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4))),
       padding: const EdgeInsets.fromLTRB(10, 24, 20, 10),
       child: LineChart(LineChartData(
         gridData: const FlGridData(show: false),
@@ -1008,7 +957,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       children: _measurements.reversed.take(3).map((m) => Card(
         elevation: 0,
         margin: const EdgeInsets.only(bottom: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.3))),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3))),
         child: ListTile(dense: true, leading: const Icon(Icons.favorite_rounded, color: Colors.red, size: 20), title: Text('${m.pressureSystolic.toInt()}/${m.pressureDiastolic.toInt()} мм рт.ст.', style: const TextStyle(fontWeight: FontWeight.bold)), trailing: Text(m.timestamp.substring(11, 16))),
       )).toList(),
     );
@@ -1052,11 +1001,11 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                   Card(
                     elevation: 0,
                     margin: const EdgeInsets.only(bottom: 8),
-                    color: statusColor?.withOpacity(0.08),
+                    color: statusColor?.withValues(alpha: 0.08),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16), 
                       side: BorderSide(
-                        color: statusColor?.withOpacity(0.4) ?? colorScheme.outlineVariant.withOpacity(0.4)
+                        color: statusColor?.withValues(alpha: 0.4) ?? colorScheme.outlineVariant.withValues(alpha: 0.4)
                       )
                     ),
                     child: ListTile(
@@ -1086,8 +1035,8 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: [
-                                Theme.of(context).scaffoldBackgroundColor.withOpacity(0),
-                                Theme.of(context).scaffoldBackgroundColor.withOpacity(0.8),
+                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0),
+                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.8),
                               ],
                             ),
                           ),
@@ -1113,10 +1062,10 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(30),
                       color: _isAppointmentsExpanded 
-                        ? colorScheme.primaryContainer.withOpacity(0.3)
-                        : colorScheme.primary.withOpacity(0.1),
+                        ? colorScheme.primaryContainer.withValues(alpha: 0.3)
+                        : colorScheme.primary.withValues(alpha: 0.1),
                       border: Border.all(
-                        color: colorScheme.primary.withOpacity(0.2),
+                        color: colorScheme.primary.withValues(alpha: 0.2),
                         width: 1.5,
                       ),
                     ),
@@ -1191,10 +1140,10 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                   Card(
                     elevation: 0,
                     margin: const EdgeInsets.only(bottom: 8),
-                    color: scoreColor.withOpacity(0.05),
+                    color: scoreColor.withValues(alpha: 0.05),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16), 
-                      side: BorderSide(color: scoreColor.withOpacity(0.3))
+                      side: BorderSide(color: scoreColor.withValues(alpha: 0.3))
                     ),
                     child: ListTile(
                       onTap: () => _showMoodDetails(m),
@@ -1217,8 +1166,8 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: [
-                                Theme.of(context).scaffoldBackgroundColor.withOpacity(0),
-                                Theme.of(context).scaffoldBackgroundColor.withOpacity(0.8),
+                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0),
+                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.8),
                               ],
                             ),
                           ),
@@ -1244,10 +1193,10 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(30),
                       color: _isMoodExpanded 
-                        ? colorScheme.primaryContainer.withOpacity(0.3)
-                        : colorScheme.primary.withOpacity(0.1),
+                        ? colorScheme.primaryContainer.withValues(alpha: 0.3)
+                        : colorScheme.primary.withValues(alpha: 0.1),
                       border: Border.all(
-                        color: colorScheme.primary.withOpacity(0.2),
+                        color: colorScheme.primary.withValues(alpha: 0.2),
                         width: 1.5,
                       ),
                     ),
@@ -1317,10 +1266,10 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                   Card(
                     elevation: 0,
                     margin: const EdgeInsets.only(bottom: 8),
-                    color: resultColor.withOpacity(0.05),
+                    color: resultColor.withValues(alpha: 0.05),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16), 
-                      side: BorderSide(color: resultColor.withOpacity(0.3))
+                      side: BorderSide(color: resultColor.withValues(alpha: 0.3))
                     ),
                     child: ListTile(
                       title: Text(res.title), 
@@ -1331,9 +1280,9 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                             decoration: BoxDecoration(
-                              color: resultColor.withOpacity(0.1),
+                              color: resultColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: resultColor.withOpacity(0.4)),
+                              border: Border.all(color: resultColor.withValues(alpha: 0.4)),
                             ),
                             child: Text(
                               '${res.totalScore} баллов', 
@@ -1359,8 +1308,8 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: [
-                                Theme.of(context).scaffoldBackgroundColor.withOpacity(0),
-                                Theme.of(context).scaffoldBackgroundColor.withOpacity(0.8),
+                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0),
+                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.8),
                               ],
                             ),
                           ),
@@ -1386,10 +1335,10 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(30),
                       color: _isQuestionnaireExpanded 
-                        ? colorScheme.primaryContainer.withOpacity(0.3)
-                        : colorScheme.primary.withOpacity(0.1),
+                        ? colorScheme.primaryContainer.withValues(alpha: 0.3)
+                        : colorScheme.primary.withValues(alpha: 0.1),
                       border: Border.all(
-                        color: colorScheme.primary.withOpacity(0.2),
+                        color: colorScheme.primary.withValues(alpha: 0.2),
                         width: 1.5,
                       ),
                     ),

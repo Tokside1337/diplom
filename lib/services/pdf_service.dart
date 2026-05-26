@@ -60,28 +60,39 @@ class PdfService {
               ),
               pw.SizedBox(height: 20),
 
-              _buildPdfSection('1. ДИАГНОЗЫ', emk.diagnoses, boldFont),
-              _buildPdfSection('2. ПРОТИВОПОКАЗАНИЯ', emk.contraindications, boldFont),
-              _buildPdfSection('3. ЦЕЛИ ЛЕЧЕНИЯ', emk.treatmentGoals, boldFont),
+              _buildPdfSection('1. САНАТОРНО-КУРОРТНАЯ КАРТА (СКК)', {
+                'Номер СКК': patient.skkNumber,
+                'Дата выдачи': patient.skkDate,
+                'Кем выдана': patient.issuedByLpu,
+                'Основной диагноз (МКБ)': patient.mainDiagnosisMkb,
+                'Диет. стол': patient.dietTable,
+                'Режим': patient.mobilityRegime,
+                'Группа здоровья': patient.healthGroup,
+              }, boldFont),
+              _buildPdfSection('2. ДИАГНОЗЫ (КЛИНИЧЕСКИЕ)', emk.diagnoses, boldFont),
+              _buildPdfSection('3. ПРОТИВОПОКАЗАНИЯ', emk.contraindications, boldFont),
+              _buildPdfSection('4. ЦЕЛИ ЛЕЧЕНИЯ (SMART)', emk.treatmentGoals, boldFont),
               
               pw.SizedBox(height: 10),
-              pw.Text('4.1 ЕЖЕДНЕВНЫЕ ЗАПИСИ', style: pw.TextStyle(font: boldFont, fontSize: 14, color: PdfColors.blue900)),
+              pw.Text('5.1 ЕЖЕДНЕВНЫЕ ЗАПИСИ (ДНЕВНИК)', style: pw.TextStyle(font: boldFont, fontSize: 14, color: PdfColors.blue900)),
               pw.Divider(),
+              if (emk.dailyLogs.isEmpty) pw.Text('Нет записей', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey)),
               ...emk.dailyLogs.map((log) => pw.Padding(
                 padding: const pw.EdgeInsets.only(bottom: 5),
                 child: pw.Bullet(text: log.toString(), style: const pw.TextStyle(fontSize: 10)),
               )),
               
               pw.SizedBox(height: 10),
-              pw.Text('4.2 ЭТАПНЫЕ ОСМОТРЫ', style: pw.TextStyle(font: boldFont, fontSize: 14, color: PdfColors.blue900)),
+              pw.Text('5.2 ЭТАПНЫЕ ОСМОТРЫ', style: pw.TextStyle(font: boldFont, fontSize: 14, color: PdfColors.blue900)),
               pw.Divider(),
+              if (emk.stageReviews.isEmpty) pw.Text('Нет записей', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey)),
               ...emk.stageReviews.map((step) => pw.Padding(
                 padding: const pw.EdgeInsets.only(bottom: 5),
                 child: pw.Bullet(text: step.toString(), style: const pw.TextStyle(fontSize: 10)),
               )),
 
               pw.SizedBox(height: 10),
-              _buildPdfSection('5. ИТОГОВЫЕ РЕКОМЕНДАЦИИ', emk.finalRecommendations, boldFont),
+              _buildPdfSection('6. ИТОГОВЫЕ РЕКОМЕНДАЦИИ', emk.finalRecommendations, boldFont),
 
               pw.SizedBox(height: 40),
               pw.Row(
@@ -116,7 +127,7 @@ class PdfService {
   }
 
   static pw.Widget _buildPdfSection(String title, Map<String, dynamic> data, pw.Font bold) {
-    if (data.isEmpty) return pw.SizedBox();
+    final entries = data.entries.where((e) => e.value != null && e.value.toString().isNotEmpty).toList();
     
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -124,17 +135,20 @@ class PdfService {
         pw.SizedBox(height: 10),
         pw.Text(title, style: pw.TextStyle(font: bold, fontSize: 14, color: PdfColors.blue900)),
         pw.Divider(),
-        ...data.entries.map((e) => pw.Padding(
-          padding: const pw.EdgeInsets.only(bottom: 4),
-          child: pw.RichText(
-            text: pw.TextSpan(
-              children: [
-                pw.TextSpan(text: '${e.key}: ', style: pw.TextStyle(font: bold, fontSize: 10)),
-                pw.TextSpan(text: e.value.toString(), style: const pw.TextStyle(fontSize: 10)),
-              ],
+        if (entries.isEmpty)
+          pw.Text('Не заполнено', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey))
+        else
+          ...entries.map((e) => pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 4),
+            child: pw.RichText(
+              text: pw.TextSpan(
+                children: [
+                  pw.TextSpan(text: '${e.key}: ', style: pw.TextStyle(font: bold, fontSize: 10)),
+                  pw.TextSpan(text: e.value.toString(), style: const pw.TextStyle(fontSize: 10)),
+                ],
+              ),
             ),
-          ),
-        )),
+          )),
       ],
     );
   }

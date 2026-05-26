@@ -380,7 +380,6 @@ class _DoctorAIChatTabState extends State<_DoctorAIChatTab> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isWide = MediaQuery.of(context).size.width > 900;
 
     return Scaffold(
       appBar: AppBar(
