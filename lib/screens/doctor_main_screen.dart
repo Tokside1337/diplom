@@ -19,17 +19,31 @@ class DoctorMainScreen extends StatefulWidget {
 class _DoctorMainScreenState extends State<DoctorMainScreen> {
   int _selectedIndex = 0;
   late List<Widget> _pages;
+  final GlobalKey<DoctorScheduleTabState> _scheduleKey = GlobalKey<DoctorScheduleTabState>();
 
   @override
   void initState() {
     super.initState();
+    _refreshPages();
+  }
+
+  void _refreshPages() {
     _pages = [
       PatientListScreen(hideAppBar: true, doctor: widget.doctor),
-      _DoctorScheduleTab(doctor: widget.doctor),
+      DoctorScheduleTab(key: _scheduleKey, doctor: widget.doctor),
       _DoctorAIChatTab(),
       _DoctorProfileTab(doctor: widget.doctor),
       _DoctorSettingsTab(),
     ];
+  }
+
+  void _onTabSelected(int index) {
+    setState(() => _selectedIndex = index);
+    if (index == 1) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scheduleKey.currentState?.loadSchedule();
+      });
+    }
   }
 
   @override
@@ -43,7 +57,7 @@ class _DoctorMainScreenState extends State<DoctorMainScreen> {
             NavigationRail(
               extended: MediaQuery.of(context).size.width > 1200,
               selectedIndex: _selectedIndex,
-              onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+              onDestinationSelected: _onTabSelected,
               labelType: MediaQuery.of(context).size.width > 1200 ? NavigationRailLabelType.none : NavigationRailLabelType.all,
               destinations: const [
                 NavigationRailDestination(icon: Icon(Icons.people_outline_rounded), selectedIcon: Icon(Icons.people_rounded), label: Text('Пациенты')),
@@ -58,7 +72,10 @@ class _DoctorMainScreenState extends State<DoctorMainScreen> {
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1000),
-                  child: _pages[_selectedIndex],
+                  child: IndexedStack(
+                    index: _selectedIndex,
+                    children: _pages,
+                  ),
                 ),
               ),
             ),
@@ -75,7 +92,7 @@ class _DoctorMainScreenState extends State<DoctorMainScreen> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+        onDestinationSelected: _onTabSelected,
         destinations: const [
           NavigationDestination(icon: Icon(Icons.people_outline_rounded), selectedIcon: Icon(Icons.people_rounded), label: 'Пациенты'),
           NavigationDestination(icon: Icon(Icons.calendar_today_outlined), selectedIcon: Icon(Icons.calendar_today_rounded), label: 'График'),
@@ -88,15 +105,15 @@ class _DoctorMainScreenState extends State<DoctorMainScreen> {
   }
 }
 
-class _DoctorScheduleTab extends StatefulWidget {
+class DoctorScheduleTab extends StatefulWidget {
   final Doctor doctor;
-  const _DoctorScheduleTab({required this.doctor});
+  const DoctorScheduleTab({super.key, required this.doctor});
 
   @override
-  State<_DoctorScheduleTab> createState() => _DoctorScheduleTabState();
+  State<DoctorScheduleTab> createState() => DoctorScheduleTabState();
 }
 
-class _DoctorScheduleTabState extends State<_DoctorScheduleTab> {
+class DoctorScheduleTabState extends State<DoctorScheduleTab> {
   final DatabaseService _dbService = DatabaseService();
   List<Map<String, dynamic>> _schedule = [];
   bool _isLoading = true;
@@ -104,7 +121,7 @@ class _DoctorScheduleTabState extends State<_DoctorScheduleTab> {
   @override
   void initState() {
     super.initState();
-    _loadSchedule();
+    loadSchedule();
   }
 
   String _formatNameShort(String fullName) {
@@ -119,7 +136,7 @@ class _DoctorScheduleTabState extends State<_DoctorScheduleTab> {
     return fullName;
   }
 
-  Future<void> _loadSchedule() async {
+  Future<void> loadSchedule() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
     try {
@@ -144,7 +161,7 @@ class _DoctorScheduleTabState extends State<_DoctorScheduleTab> {
   Future<void> _updateStatus(int id, String status) async {
     try {
       await _dbService.updateAppointmentStatus(id, status);
-      _loadSchedule();
+      loadSchedule();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -164,14 +181,14 @@ class _DoctorScheduleTabState extends State<_DoctorScheduleTab> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
-            onPressed: _loadSchedule,
+            onPressed: loadSchedule,
           ),
         ],
       ),
       body: _isLoading 
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: _loadSchedule,
+              onRefresh: loadSchedule,
               child: _schedule.isEmpty
                   ? ListView(
                       children: [

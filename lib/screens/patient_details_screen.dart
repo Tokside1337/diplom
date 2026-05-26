@@ -354,7 +354,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     final titleController = TextEditingController();
     final typeController = TextEditingController(text: 'Процедура');
     final roomController = TextEditingController();
-    final doctorController = TextEditingController();
+    final doctorController = TextEditingController(text: widget.doctor?.name ?? '');
     DateTime selectedDate = DateTime.now();
     TimeOfDay selectedTime = TimeOfDay.now();
     final colorScheme = Theme.of(context).colorScheme;
@@ -427,6 +427,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                   ),
                   const SizedBox(height: 16),
                   Autocomplete<String>(
+                    initialValue: TextEditingValue(text: doctorController.text),
                     optionsBuilder: (TextEditingValue textEditingValue) {
                       if (textEditingValue.text.isEmpty) return const Iterable<String>.empty();
                       final names = _allDoctors.map((d) => d.name).toList();
