@@ -727,7 +727,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                   _buildPatientHeader(),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
-                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => EMKScreen(patient: widget.patient, isDoctor: false))),
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => EMKScreen(patient: _currentPatient, isDoctor: false))),
                     icon: const Icon(Icons.medical_information_rounded),
                     label: const Text('Открыть Электронную мед. карту (ЭМК)'),
                     style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
@@ -772,7 +772,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.medical_information_rounded, color: Colors.blue),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => EMKScreen(patient: widget.patient, isDoctor: true))),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => EMKScreen(patient: _currentPatient, isDoctor: true))),
             tooltip: 'ЭМК пациента',
           ),
           IconButton(
@@ -797,7 +797,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                   FilledButton.icon(
                     onPressed: () => Navigator.push(
                       context, 
-                      MaterialPageRoute(builder: (context) => PatientEditScreen(patient: widget.patient))
+                      MaterialPageRoute(builder: (context) => PatientEditScreen(patient: _currentPatient))
                     ).then((_) => _loadData()),
                     icon: const Icon(Icons.edit_note_rounded),
                     label: const Text('Редактировать данные пациента'),

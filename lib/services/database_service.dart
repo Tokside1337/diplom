@@ -208,8 +208,13 @@ class DatabaseService with ApiClient {
     return null;
   }
 
-  Future<void> updatePatient(Patient p) async => 
-      await _safeRequest(() => http.put(Uri.parse('$baseUrl/patients'), body: jsonEncode(p.toMap()), headers: headers), 'updatePatient');
+  Future<bool> updatePatient(Patient p) async {
+    final res = await _safeRequest(
+      () => http.put(Uri.parse('$baseUrl/patients'), body: jsonEncode(p.toMap()), headers: headers), 
+      'updatePatient'
+    );
+    return res != null && res.statusCode >= 200 && res.statusCode < 300;
+  }
 
   Future<void> deletePatient(int id) async => 
       await _safeRequest(() => http.delete(Uri.parse('$baseUrl/patients/$id'), headers: headers), 'deletePatient');
