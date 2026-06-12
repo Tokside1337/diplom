@@ -39,22 +39,63 @@ class DatabaseService {
         final sqlContent = await file.readAsString();
         print('Executing migration: ${file.path}');
         
-        // Split SQL content into individual statements by semicolon
-        final statements = sqlContent
-            .split(';')
-            .map((s) => s.trim())
-            .where((s) => s.isNotEmpty)
-            .toList();
+        try {
+          // The postgres driver's pool.execute() might not support multiple statements 
+          // in a single string if it's using prepared statements under the hood.
+          // However, we can use a connection directly or ensure we use the right method.
+          await pool.withConnection((conn) async {
+            // Using a raw query on the connection often allows multi-statement strings.
+            // But to be safest with the 'postgres' package, we should split 
+            // by a custom delimiter or use a more robust splitting logic 
+            // that respects 'DO $$' blocks.
+            
+            // For simplicity and reliability, let's use a regex that splits by semicolon
+            // but ignores semicolons inside $$-quoted blocks.
+            final statements = sqlContent
+                .split(';')
+                .map((s) => s.trim())
+                .where((s) => s.isNotEmpty)
+                .toList();
 
-        for (var stmt in statements) {
-          try {
-            await pool.execute(stmt);
-          } catch (e) {
-            final error = e.toString();
-            // Ignore "already exists" errors during initial setup
-            if (!error.contains('already exists') && !error.contains('already a member')) {
-              print('Migration statement failed: $e\nStatement: $stmt');
+            // We need a way to group statements that belong to a block.
+            // But actually, the most robust way in Dart's postgres package is to 
+            // NOT split when inside a $$ block.
+            
+            List<String> realStatements = [];
+            String buffer = '';
+            bool insideDollars = false;
+            
+            for (var stmt in statements) {
+              buffer += (buffer.isEmpty ? '' : ';') + stmt;
+              
+              // Count occurrences of $$
+              int dollarCount = 0;
+              int pos = 0;
+              while ((pos = stmt.indexOf('\$\$', pos)) != -1) {
+                dollarCount++;
+                pos += 2;
+              }
+              
+              if (dollarCount % 2 != 0) {
+                insideDollars = !insideDollars;
+              }
+              
+              if (!insideDollars) {
+                realStatements.add(buffer);
+                buffer = '';
+              }
             }
+
+            for (var stmt in realStatements) {
+              await conn.execute(stmt);
+            }
+          });
+        } catch (e) {
+          final error = e.toString();
+          if (!error.contains('already exists') && 
+              !error.contains('already a member') &&
+              !error.contains('already exist')) {
+            print('Migration failed in ${file.path}: $e');
           }
         }
       }
@@ -63,7 +104,7 @@ class DatabaseService {
 
   Future<void> _ensureAdminUser() async {
     final adminCheck = await pool.execute(
-      Sql.named('SELECT id, password FROM users WHERE login = @login'),
+      Sql.named('SELECT id, password_hash FROM users WHERE login = @login'),
       parameters: {'login': 'admin'},
     );
 
@@ -71,7 +112,7 @@ class DatabaseService {
     if (adminCheck.isEmpty) {
       final hashedPassword = BCrypt.hashpw(adminPass, BCrypt.gensalt());
       await pool.execute(
-        Sql.named('INSERT INTO users (login, password, role) VALUES (@login, @password, @role)'),
+        Sql.named('INSERT INTO users (login, password_hash, role) VALUES (@login, @password, @role)'),
         parameters: {'login': 'admin', 'password': hashedPassword, 'role': 'admin'},
       );
       print('Default admin created.');
@@ -80,7 +121,7 @@ class DatabaseService {
       if (currentPass.length < 30) {
         final hashedPassword = BCrypt.hashpw(currentPass, BCrypt.gensalt());
         await pool.execute(
-          Sql.named('UPDATE users SET password = @p WHERE login = @l'),
+          Sql.named('UPDATE users SET password_hash = @p WHERE login = @l'),
           parameters: {'l': 'admin', 'p': hashedPassword},
         );
         print('Admin password secured with BCrypt.');

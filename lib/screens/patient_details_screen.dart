@@ -17,7 +17,11 @@ class Recommendation {
   final String text;
   final String priority;
   final IconData icon;
-  Recommendation({required this.text, required this.priority, required this.icon});
+  Recommendation({
+    required this.text,
+    required this.priority,
+    required this.icon,
+  });
 }
 
 class PatientDetailsScreen extends StatefulWidget {
@@ -140,7 +144,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       final appts = await _dbService.getAppointments(pId);
       final qres = await _dbService.getQuestionnaireResults(pId);
       final docs = await _dbService.getDoctors();
-      
+
       Doctor? assignedDoc;
       final currentDocId = latestPatient?.doctorId ?? _currentPatient.doctorId;
       if (currentDocId != null) {
@@ -158,7 +162,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
           _showReminders();
         }
       }
-      
+
       if (mounted) {
         setState(() {
           if (latestPatient != null) _currentPatient = latestPatient;
@@ -175,7 +179,9 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
           if (mounted) {
             setState(() {
               _aiSummary = analysis['summary'] ?? 'Нет данных для анализа.';
-              _aiRecommendations = List<String>.from(analysis['recommendations'] ?? []);
+              _aiRecommendations = List<String>.from(
+                analysis['recommendations'] ?? [],
+              );
             });
           }
         });
@@ -193,10 +199,15 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             title: const Row(
               children: [
-                Icon(Icons.notification_important_rounded, color: Colors.orange),
+                Icon(
+                  Icons.notification_important_rounded,
+                  color: Colors.orange,
+                ),
                 SizedBox(width: 12),
                 Text('Напоминание'),
               ],
@@ -222,18 +233,47 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
 
   String _getAppointmentType(String title) {
     final t = title.toLowerCase();
-    if (t.contains('анализ') || t.contains('кров') || t.contains('моч')) return 'Анализ';
-    if (t.contains('прием') || t.contains('консультация') || t.contains('осмотр') || t.contains('обход') || t.contains('занятие с')) return 'Осмотр';
-    if (t.contains('узи') || t.contains('экг') || t.contains('мрт') || t.contains('кт') || 
-        t.contains('рентген') || t.contains('флюоро') || t.contains('холтер') || t.contains('смад') || 
-        t.contains('эхокг') || t.contains('ээг') || t.contains('спирометр') || t.contains('вэм')) {
+    if (t.contains('анализ') || t.contains('кров') || t.contains('моч'))
+      return 'Анализ';
+    if (t.contains('прием') ||
+        t.contains('консультация') ||
+        t.contains('осмотр') ||
+        t.contains('обход') ||
+        t.contains('занятие с'))
+      return 'Осмотр';
+    if (t.contains('узи') ||
+        t.contains('экг') ||
+        t.contains('мрт') ||
+        t.contains('кт') ||
+        t.contains('рентген') ||
+        t.contains('флюоро') ||
+        t.contains('холтер') ||
+        t.contains('смад') ||
+        t.contains('эхокг') ||
+        t.contains('ээг') ||
+        t.contains('спирометр') ||
+        t.contains('вэм')) {
       return 'Диагностика';
     }
-    if (t.contains('перевяз') || t.contains('инъекц') || t.contains('капельн') || t.contains('укол') || 
-        t.contains('массаж') || t.contains('терапия') || t.contains('лфк') || t.contains('ходьба') || 
-        t.contains('механо') || t.contains('тренажер') || t.contains('стабило') || t.contains('гимнастика') || 
-        t.contains('электрофорез') || t.contains('магнито') || t.contains('лазер') || t.contains('увч') || 
-        t.contains('игло') || t.contains('грязе') || t.contains('парафин')) {
+    if (t.contains('перевяз') ||
+        t.contains('инъекц') ||
+        t.contains('капельн') ||
+        t.contains('укол') ||
+        t.contains('массаж') ||
+        t.contains('терапия') ||
+        t.contains('лфк') ||
+        t.contains('ходьба') ||
+        t.contains('механо') ||
+        t.contains('тренажер') ||
+        t.contains('стабило') ||
+        t.contains('гимнастика') ||
+        t.contains('электрофорез') ||
+        t.contains('магнито') ||
+        t.contains('лазер') ||
+        t.contains('увч') ||
+        t.contains('игло') ||
+        t.contains('грязе') ||
+        t.contains('парафин')) {
       return 'Процедура';
     }
     return 'Процедура';
@@ -246,9 +286,12 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
         title: const Text('Удаление мероприятия'),
         content: const Text('Вы уверены, что хотите удалить это мероприятие?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Отмена')),
           TextButton(
-            onPressed: () => Navigator.pop(context, true), 
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
             child: const Text('Удалить', style: TextStyle(color: Colors.red)),
           ),
         ],
@@ -268,9 +311,12 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
         title: const Text('Удаление записи'),
         content: const Text('Удалить эту запись из дневника настроения?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Отмена')),
           TextButton(
-            onPressed: () => Navigator.pop(context, true), 
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
             child: const Text('Удалить', style: TextStyle(color: Colors.red)),
           ),
         ],
@@ -288,11 +334,16 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Удаление результата'),
-        content: const Text('Вы уверены, что хотите удалить этот результат опросника?'),
+        content: const Text(
+          'Вы уверены, что хотите удалить этот результат опросника?',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Отмена')),
           TextButton(
-            onPressed: () => Navigator.pop(context, true), 
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
             child: const Text('Удалить', style: TextStyle(color: Colors.red)),
           ),
         ],
@@ -331,20 +382,45 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Дата: ${mood.timestamp.substring(0, 16)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey)),
+              Text(
+                'Дата: ${mood.timestamp.substring(0, 16)}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: Colors.grey,
+                ),
+              ),
               const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: scoreColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                child: Text('Оценка ИИ: ${mood.score}/5', style: TextStyle(color: scoreColor, fontWeight: FontWeight.bold)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: scoreColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Оценка ИИ: ${mood.score}/5',
+                  style: TextStyle(
+                    color: scoreColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
-              Text(mood.comment, style: const TextStyle(fontSize: 16, height: 1.5)),
+              Text(
+                mood.comment,
+                style: const TextStyle(fontSize: 16, height: 1.5),
+              ),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Закрыть')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Закрыть'),
+          ),
         ],
       ),
     );
@@ -354,7 +430,9 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     final titleController = TextEditingController();
     final typeController = TextEditingController(text: 'Процедура');
     final roomController = TextEditingController();
-    final doctorController = TextEditingController(text: widget.doctor?.name ?? '');
+    final doctorController = TextEditingController(
+      text: widget.doctor?.name ?? '',
+    );
     DateTime selectedDate = DateTime.now();
     TimeOfDay selectedTime = TimeOfDay.now();
     final colorScheme = Theme.of(context).colorScheme;
@@ -363,7 +441,9 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
           title: Row(
             children: [
               Icon(Icons.event_available_rounded, color: colorScheme.primary),
@@ -379,9 +459,13 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                 children: [
                   Autocomplete<String>(
                     optionsBuilder: (TextEditingValue textEditingValue) {
-                      if (textEditingValue.text.isEmpty) return const Iterable<String>.empty();
-                      return _procedureOptions.where((option) =>
-                          option.toLowerCase().startsWith(textEditingValue.text.toLowerCase()));
+                      if (textEditingValue.text.isEmpty)
+                        return const Iterable<String>.empty();
+                      return _procedureOptions.where(
+                        (option) => option.toLowerCase().startsWith(
+                          textEditingValue.text.toLowerCase(),
+                        ),
+                      );
                     },
                     onSelected: (String selection) {
                       titleController.text = selection;
@@ -389,23 +473,28 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                         typeController.text = _getAppointmentType(selection);
                       });
                     },
-                    fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
-                      return TextField(
-                        controller: textController,
-                        focusNode: focusNode,
-                        onChanged: (value) {
-                          titleController.text = value;
-                          setDialogState(() {
-                            typeController.text = _getAppointmentType(value);
-                          });
+                    fieldViewBuilder:
+                        (context, textController, focusNode, onFieldSubmitted) {
+                          return TextField(
+                            controller: textController,
+                            focusNode: focusNode,
+                            onChanged: (value) {
+                              titleController.text = value;
+                              setDialogState(() {
+                                typeController.text = _getAppointmentType(
+                                  value,
+                                );
+                              });
+                            },
+                            decoration: InputDecoration(
+                              labelText: 'Название мероприятия',
+                              prefixIcon: const Icon(Icons.title_rounded),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          );
                         },
-                        decoration: InputDecoration(
-                          labelText: 'Название мероприятия',
-                          prefixIcon: const Icon(Icons.title_rounded),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      );
-                    },
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -413,7 +502,9 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                     decoration: InputDecoration(
                       labelText: 'Тип',
                       prefixIcon: const Icon(Icons.category_rounded),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -422,43 +513,62 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                     decoration: InputDecoration(
                       labelText: 'Кабинет',
                       prefixIcon: const Icon(Icons.meeting_room_rounded),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
                   Autocomplete<String>(
                     initialValue: TextEditingValue(text: doctorController.text),
                     optionsBuilder: (TextEditingValue textEditingValue) {
-                      if (textEditingValue.text.isEmpty) return const Iterable<String>.empty();
+                      if (textEditingValue.text.isEmpty)
+                        return const Iterable<String>.empty();
                       final names = _allDoctors.map((d) => d.name).toList();
-                      return names.where((option) =>
-                          option.toLowerCase().startsWith(textEditingValue.text.toLowerCase()));
+                      return names.where(
+                        (option) => option.toLowerCase().startsWith(
+                          textEditingValue.text.toLowerCase(),
+                        ),
+                      );
                     },
                     onSelected: (String selection) {
                       doctorController.text = selection;
                     },
-                    fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
-                      return TextField(
-                        controller: textController,
-                        focusNode: focusNode,
-                        onChanged: (value) => doctorController.text = value,
-                        decoration: InputDecoration(
-                          labelText: 'Врач',
-                          prefixIcon: const Icon(Icons.person_search_rounded),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      );
-                    },
+                    fieldViewBuilder:
+                        (context, textController, focusNode, onFieldSubmitted) {
+                          return TextField(
+                            controller: textController,
+                            focusNode: focusNode,
+                            onChanged: (value) => doctorController.text = value,
+                            decoration: InputDecoration(
+                              labelText: 'Врач',
+                              prefixIcon: const Icon(
+                                Icons.person_search_rounded,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          );
+                        },
                   ),
                   const SizedBox(height: 8),
                   const Divider(),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.calendar_today_rounded),
-                    title: Text("Дата: ${DateFormat('dd.MM.yyyy').format(selectedDate)}"),
+                    title: Text(
+                      "Дата: ${DateFormat('dd.MM.yyyy').format(selectedDate)}",
+                    ),
                     onTap: () async {
-                      final date = await showDatePicker(context: context, initialDate: selectedDate, firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 365)));
-                      if (date != null) setDialogState(() => selectedDate = date);
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (date != null)
+                        setDialogState(() => selectedDate = date);
                     },
                   ),
                   ListTile(
@@ -466,8 +576,12 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                     leading: const Icon(Icons.access_time_rounded),
                     title: Text("Время: ${selectedTime.format(context)}"),
                     onTap: () async {
-                      final time = await showTimePicker(context: context, initialTime: selectedTime);
-                      if (time != null) setDialogState(() => selectedTime = time);
+                      final time = await showTimePicker(
+                        context: context,
+                        initialTime: selectedTime,
+                      );
+                      if (time != null)
+                        setDialogState(() => selectedTime = time);
                     },
                   ),
                 ],
@@ -475,26 +589,41 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Отмена'),
+            ),
             FilledButton(
               onPressed: () async {
                 final title = titleController.text.trim();
                 final doctor = doctorController.text.trim();
 
                 if (title.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Введите название мероприятия')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Введите название мероприятия'),
+                    ),
+                  );
                   return;
                 }
 
-                final fullDateTime = DateTime(selectedDate.year, selectedDate.month, selectedDate.day, selectedTime.hour, selectedTime.minute);
-                await _dbService.insertAppointment(Appointment(
-                  patientId: _currentPatient.id!,
-                  type: typeController.text,
-                  title: title,
-                  time: fullDateTime.toString(),
-                  room: roomController.text,
-                  doctor: doctor,
-                ));
+                final fullDateTime = DateTime(
+                  selectedDate.year,
+                  selectedDate.month,
+                  selectedDate.day,
+                  selectedTime.hour,
+                  selectedTime.minute,
+                );
+                await _dbService.insertAppointment(
+                  Appointment(
+                    patientId: _currentPatient.id!,
+                    type: typeController.text,
+                    title: title,
+                    time: fullDateTime.toString(),
+                    room: roomController.text,
+                    doctor: doctor,
+                  ),
+                );
                 if (!context.mounted) return;
                 Navigator.pop(context);
                 _loadData();
@@ -533,26 +662,39 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                 children: [
                   Expanded(
                     child: TextField(
-                      controller: systolicController, 
-                      keyboardType: TextInputType.number, 
+                      controller: systolicController,
+                      keyboardType: TextInputType.number,
                       textAlign: TextAlign.center,
                       decoration: InputDecoration(
-                        labelText: 'Сист.', 
+                        labelText: 'Сист.',
                         hintText: '120',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
-                  const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Text('/', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w300))),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      '/',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w300,
+                      ),
+                    ),
+                  ),
                   Expanded(
                     child: TextField(
-                      controller: diastolicController, 
-                      keyboardType: TextInputType.number, 
+                      controller: diastolicController,
+                      keyboardType: TextInputType.number,
                       textAlign: TextAlign.center,
                       decoration: InputDecoration(
-                        labelText: 'Диаст.', 
+                        labelText: 'Диаст.',
                         hintText: '80',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
@@ -560,31 +702,46 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               ),
               const SizedBox(height: 16),
               TextField(
-                controller: pulseController, 
-                keyboardType: TextInputType.number, 
+                controller: pulseController,
+                keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  labelText: 'Пульс', 
+                  labelText: 'Пульс',
                   hintText: '70',
-                  prefixIcon: const Icon(Icons.favorite_rounded, color: Colors.red),
+                  prefixIcon: const Icon(
+                    Icons.favorite_rounded,
+                    color: Colors.red,
+                  ),
                   suffixText: 'уд/мин',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Отмена'),
+          ),
           FilledButton(
             onPressed: () async {
-              await _dbService.insertMeasurement(Measurement(
-                patientId: _currentPatient.id!,
-                pressureSystolic: double.tryParse(systolicController.text) ?? 120.0,
-                pressureDiastolic: double.tryParse(diastolicController.text) ?? 80.0,
-                pulse: int.tryParse(pulseController.text) ?? 70,
-                painLevel: 0,
-                timestamp: DateTime.now().toUtc().add(const Duration(hours: 3)).toString(),
-              ));
+              await _dbService.insertMeasurement(
+                Measurement(
+                  patientId: _currentPatient.id!,
+                  pressureSystolic:
+                      double.tryParse(systolicController.text) ?? 120.0,
+                  pressureDiastolic:
+                      double.tryParse(diastolicController.text) ?? 80.0,
+                  pulse: int.tryParse(pulseController.text) ?? 70,
+                  painLevel: 0,
+                  timestamp: DateTime.now()
+                      .toUtc()
+                      .add(const Duration(hours: 3))
+                      .toString(),
+                ),
+              );
               if (!context.mounted) return;
               Navigator.pop(context);
               _loadData();
@@ -609,39 +766,56 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Опишите ваше самочувствие, и ИИ определит ваше состояние'),
+              const Text(
+                'Опишите ваше самочувствие, и ИИ определит ваше состояние',
+              ),
               const SizedBox(height: 16),
               TextField(
-                controller: commentController, 
-                maxLines: 4, 
+                controller: commentController,
+                maxLines: 4,
                 decoration: InputDecoration(
-                  hintText: 'Например: Сегодня чувствую себя бодро, выспался и готов к прогулке...', 
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  hintText:
+                      'Например: Сегодня чувствую себя бодро, выспался и готов к прогулке...',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Отмена'),
+          ),
           FilledButton(
             onPressed: () async {
               final comment = commentController.text.trim();
               if (comment.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Пожалуйста, напишите что-нибудь')));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Пожалуйста, напишите что-нибудь'),
+                  ),
+                );
                 return;
               }
 
               final calculatedScore = AIService.calculateMoodScore(comment);
               final sentiment = AIService.analyzeSentiment(comment);
 
-              await _dbService.insertMoodEntry(MoodEntry(
-                patientId: _currentPatient.id!, 
-                score: calculatedScore, 
-                comment: comment,
-                timestamp: DateTime.now().toUtc().add(const Duration(hours: 3)).toString(),
-                sentiment: sentiment,
-              ));
+              await _dbService.insertMoodEntry(
+                MoodEntry(
+                  patientId: _currentPatient.id!,
+                  score: calculatedScore,
+                  comment: comment,
+                  timestamp: DateTime.now()
+                      .toUtc()
+                      .add(const Duration(hours: 3))
+                      .toString(),
+                  sentiment: sentiment,
+                ),
+              );
               if (!context.mounted) return;
               Navigator.pop(context);
               _loadData();
@@ -655,16 +829,21 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
 
   Future<void> _sendPressureReminder() async {
     if (widget.doctor == null) return;
-    
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Напоминание'),
-        content: const Text('Отправить пациенту уведомление с просьбой измерить давление?'),
+        content: const Text(
+          'Отправить пациенту уведомление с просьбой измерить давление?',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Отмена')),
           TextButton(
-            onPressed: () => Navigator.pop(context, true), 
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
             child: const Text('Отправить'),
           ),
         ],
@@ -673,14 +852,14 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
 
     if (confirmed == true) {
       await _dbService.sendReminder(
-        _currentPatient.id!, 
-        widget.doctor!.id!, 
-        'Ваш лечащий врач просит вас измерить артериальное давление.'
+        _currentPatient.id!,
+        widget.doctor!.id!,
+        'Ваш лечащий врач просит вас измерить артериальное давление.',
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Напоминание отправлено')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Напоминание отправлено')));
       }
     }
   }
@@ -696,7 +875,9 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       padding: EdgeInsets.only(bottom: bottomMargin, left: 4),
       child: Text(
         title,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -704,15 +885,22 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   Widget _buildPatientProfile() {
     final isWide = MediaQuery.of(context).size.width > 900;
     return Scaffold(
-      appBar: widget.hideNavigation ? null : AppBar(
-        title: const Text('Мой профиль'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_rounded),
-            onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen())),
-          ),
-        ],
-      ),
+      appBar: widget.hideNavigation
+          ? null
+          : AppBar(
+              title: const Text('Мой профиль'),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.logout_rounded),
+                  onPressed: () => Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const LoginScreen(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
       body: RefreshIndicator(
         onRefresh: _loadData,
         child: SingleChildScrollView(
@@ -720,17 +908,29 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
           padding: const EdgeInsets.all(16),
           child: Center(
             child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: isWide ? 1000 : double.infinity),
+              constraints: BoxConstraints(
+                maxWidth: isWide ? 1000 : double.infinity,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildPatientHeader(),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
-                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => EMKScreen(patient: _currentPatient, isDoctor: false))),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => EMKScreen(
+                          patient: _currentPatient,
+                          isDoctor: false,
+                        ),
+                      ),
+                    ),
                     icon: const Icon(Icons.medical_information_rounded),
                     label: const Text('Открыть Электронную мед. карту (ЭМК)'),
-                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(50),
+                    ),
                   ),
                   const SizedBox(height: 24),
                   _buildSectionTitle('Рекомендации и Анализ ИИ'),
@@ -758,8 +958,18 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: _buildGlassFab([
-        _ActionItem(Icons.mood_rounded, 'Дневник', Theme.of(context).colorScheme.primary, _addMood),
-        _ActionItem(Icons.add_chart_rounded, 'Замер', Theme.of(context).colorScheme.secondary, _addMeasurement),
+        _ActionItem(
+          Icons.mood_rounded,
+          'Дневник',
+          Theme.of(context).colorScheme.primary,
+          _addMood,
+        ),
+        _ActionItem(
+          Icons.add_chart_rounded,
+          'Замер',
+          Theme.of(context).colorScheme.secondary,
+          _addMeasurement,
+        ),
       ]),
     );
   }
@@ -771,13 +981,31 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
         title: Text('Пациент: ${_formatNameShort(_currentPatient.name)}'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.medical_information_rounded, color: Colors.blue),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => EMKScreen(patient: _currentPatient, isDoctor: true))),
+            icon: const Icon(
+              Icons.medical_information_rounded,
+              color: Colors.blue,
+            ),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    EMKScreen(patient: _currentPatient, isDoctor: true),
+              ),
+            ),
             tooltip: 'ЭМК пациента',
           ),
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline_rounded),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => CommunicationScreen(patientId: _currentPatient.id!, isPatientView: false, doctor: widget.doctor))).then((_) => _loadData()),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => CommunicationScreen(
+                  patientId: _currentPatient.id!,
+                  isPatientView: false,
+                  doctor: widget.doctor,
+                ),
+              ),
+            ).then((_) => _loadData()),
           ),
         ],
       ),
@@ -788,7 +1016,9 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
           padding: const EdgeInsets.all(16),
           child: Center(
             child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: isWide ? 1000 : double.infinity),
+              constraints: BoxConstraints(
+                maxWidth: isWide ? 1000 : double.infinity,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -796,14 +1026,19 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                   const SizedBox(height: 12),
                   FilledButton.icon(
                     onPressed: () => Navigator.push(
-                      context, 
-                      MaterialPageRoute(builder: (context) => PatientEditScreen(patient: _currentPatient))
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            PatientEditScreen(patient: _currentPatient),
+                      ),
                     ).then((_) => _loadData()),
                     icon: const Icon(Icons.edit_note_rounded),
                     label: const Text('Редактировать данные пациента'),
                     style: FilledButton.styleFrom(
                       minimumSize: const Size.fromHeight(50),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -832,9 +1067,30 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: _buildGlassFab([
-        _ActionItem(Icons.notification_add_rounded, 'Давление', Colors.red, _sendPressureReminder),
-        _ActionItem(Icons.event_rounded, 'Мероприятие', Colors.orange, _addAppointment),
-        _ActionItem(Icons.assignment_rounded, 'Опросник', Colors.blue, () => Navigator.push(context, MaterialPageRoute(builder: (context) => QuestionnaireScreen(patientId: _currentPatient.id!))).then((_) => _loadData())),
+        _ActionItem(
+          Icons.notification_add_rounded,
+          'Давление',
+          Colors.red,
+          _sendPressureReminder,
+        ),
+        _ActionItem(
+          Icons.event_rounded,
+          'Мероприятие',
+          Colors.orange,
+          _addAppointment,
+        ),
+        _ActionItem(
+          Icons.assignment_rounded,
+          'Опросник',
+          Colors.blue,
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  QuestionnaireScreen(patientId: _currentPatient.id!),
+            ),
+          ).then((_) => _loadData()),
+        ),
       ]),
     );
   }
@@ -855,9 +1111,13 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
             child: Container(
               height: 64,
               decoration: BoxDecoration(
-                color: isDark ? Colors.black.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.6),
+                color: isDark
+                    ? Colors.black.withValues(alpha: 0.5)
+                    : Colors.white.withValues(alpha: 0.6),
                 borderRadius: BorderRadius.circular(32),
-                border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                ),
               ),
               child: Row(
                 children: items.asMap().entries.map((entry) {
@@ -866,7 +1126,16 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                   return Expanded(
                     child: Row(
                       children: [
-                        if (idx > 0) VerticalDivider(width: 1, thickness: 1, indent: 20, endIndent: 20, color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                        if (idx > 0)
+                          VerticalDivider(
+                            width: 1,
+                            thickness: 1,
+                            indent: 20,
+                            endIndent: 20,
+                            color: colorScheme.outlineVariant.withValues(
+                              alpha: 0.5,
+                            ),
+                          ),
                         Expanded(
                           child: InkWell(
                             onTap: item.onTap,
@@ -876,7 +1145,13 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                                 children: [
                                   Icon(item.icon, color: item.color, size: 22),
                                   const SizedBox(width: 8),
-                                  Text(item.label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                  Text(
+                                    item.label,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -898,22 +1173,52 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5))),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
       child: Column(
         children: [
           ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            leading: CircleAvatar(backgroundColor: colorScheme.primaryContainer, child: Icon(Icons.person_rounded, color: colorScheme.onPrimaryContainer)),
-            title: Text(_formatNameShort(_currentPatient.name), style: const TextStyle(fontWeight: FontWeight.bold)),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 8,
+            ),
+            leading: CircleAvatar(
+              backgroundColor: colorScheme.primaryContainer,
+              child: Icon(
+                Icons.person_rounded,
+                color: colorScheme.onPrimaryContainer,
+              ),
+            ),
+            title: Text(
+              _formatNameShort(_currentPatient.name),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             subtitle: Text('Дата рождения: ${_currentPatient.birthDate}'),
           ),
           if (_assignedDoctor != null) ...[
             const Divider(height: 1, indent: 20, endIndent: 20),
             ListTile(
               dense: true,
-              leading: Icon(Icons.medical_services_outlined, color: colorScheme.secondary, size: 20),
-              title: Text('Ваш врач: ${_assignedDoctor!.name}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-              subtitle: Text('${_assignedDoctor!.specialization}${_assignedDoctor!.cabinet != null ? ' • Каб. ${_assignedDoctor!.cabinet}' : ''}', style: const TextStyle(fontSize: 12)),
+              leading: Icon(
+                Icons.medical_services_outlined,
+                color: colorScheme.secondary,
+                size: 20,
+              ),
+              title: Text(
+                'Ваш врач: ${_assignedDoctor!.name}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              subtitle: Text(
+                '${_assignedDoctor!.specialization}${_assignedDoctor!.cabinet != null ? ' • Каб. ${_assignedDoctor!.cabinet}' : ''}',
+                style: const TextStyle(fontSize: 12),
+              ),
             ),
           ],
         ],
@@ -924,10 +1229,12 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   Widget _buildAICard({bool centeredTitle = false}) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Card(
       elevation: 0,
-      color: isDark ? colorScheme.primaryContainer.withValues(alpha: 0.1) : colorScheme.primaryContainer.withValues(alpha: 0.2),
+      color: isDark
+          ? colorScheme.primaryContainer.withValues(alpha: 0.1)
+          : colorScheme.primaryContainer.withValues(alpha: 0.2),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
         side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.2)),
@@ -945,23 +1252,32 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                     color: colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.psychology_rounded, color: colorScheme.primary, size: 24),
+                  child: Icon(
+                    Icons.psychology_rounded,
+                    color: colorScheme.primary,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Text(
                   centeredTitle ? 'ИИ помощник "РеСтарт"' : 'Анализ ИИ',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.primary, fontSize: 18),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.primary,
+                    fontSize: 18,
+                  ),
                 ),
                 const Spacer(),
                 if (_aiSummary == 'Загрузка анализа...')
-                  const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
               ],
             ),
             const SizedBox(height: 20),
-            Text(
-              _aiSummary,
-              style: const TextStyle(height: 1.5, fontSize: 15),
-            ),
+            Text(_aiSummary, style: const TextStyle(height: 1.5, fontSize: 15)),
             if (_aiRecommendations.isNotEmpty) ...[
               const SizedBox(height: 20),
               Text(
@@ -974,22 +1290,31 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              ..._aiRecommendations.map((rec) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.check_circle_outline_rounded, color: colorScheme.primary, size: 18),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        rec,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              ..._aiRecommendations.map(
+                (rec) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.check_circle_outline_rounded,
+                        color: colorScheme.primary,
+                        size: 18,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          rec,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              )),
+              ),
             ],
           ],
         ),
@@ -1001,38 +1326,100 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
     if (_measurements.isEmpty) return const SizedBox();
     return Container(
       height: 220,
-      decoration: BoxDecoration(color: Theme.of(context).cardColor, borderRadius: BorderRadius.circular(20), border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4))),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Theme.of(
+            context,
+          ).colorScheme.outlineVariant.withValues(alpha: 0.4),
+        ),
+      ),
       padding: const EdgeInsets.fromLTRB(10, 24, 20, 10),
-      child: LineChart(LineChartData(
-        gridData: const FlGridData(show: false),
-        titlesData: const FlTitlesData(topTitles: AxisTitles(), rightTitles: AxisTitles()),
-        borderData: FlBorderData(show: false),
-        lineBarsData: [
-          LineChartBarData(spots: _measurements.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.pressureSystolic)).toList(), color: Colors.red, dotData: const FlDotData(show: true), isCurved: true),
-          LineChartBarData(spots: _measurements.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value.pressureDiastolic)).toList(), color: Colors.blue, dotData: const FlDotData(show: true), isCurved: true),
-        ],
-      )),
+      child: LineChart(
+        LineChartData(
+          gridData: const FlGridData(show: false),
+          titlesData: const FlTitlesData(
+            topTitles: AxisTitles(),
+            rightTitles: AxisTitles(),
+          ),
+          borderData: FlBorderData(show: false),
+          lineBarsData: [
+            LineChartBarData(
+              spots: _measurements
+                  .asMap()
+                  .entries
+                  .map(
+                    (e) => FlSpot(e.key.toDouble(), e.value.pressureSystolic),
+                  )
+                  .toList(),
+              color: Colors.red,
+              dotData: const FlDotData(show: true),
+              isCurved: true,
+            ),
+            LineChartBarData(
+              spots: _measurements
+                  .asMap()
+                  .entries
+                  .map(
+                    (e) => FlSpot(e.key.toDouble(), e.value.pressureDiastolic),
+                  )
+                  .toList(),
+              color: Colors.blue,
+              dotData: const FlDotData(show: true),
+              isCurved: true,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildMeasurementsDetails() {
     if (_measurements.isEmpty) return const SizedBox();
     return Column(
-      children: _measurements.reversed.take(3).map((m) => Card(
-        elevation: 0,
-        margin: const EdgeInsets.only(bottom: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3))),
-        child: ListTile(dense: true, leading: const Icon(Icons.favorite_rounded, color: Colors.red, size: 20), title: Text('${m.pressureSystolic.toInt()}/${m.pressureDiastolic.toInt()} мм рт.ст.', style: const TextStyle(fontWeight: FontWeight.bold)), trailing: Text(m.timestamp.substring(11, 16))),
-      )).toList(),
+      children: _measurements.reversed
+          .take(3)
+          .map(
+            (m) => Card(
+              elevation: 0,
+              margin: const EdgeInsets.only(bottom: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.outlineVariant.withValues(alpha: 0.3),
+                ),
+              ),
+              child: ListTile(
+                dense: true,
+                leading: const Icon(
+                  Icons.favorite_rounded,
+                  color: Colors.red,
+                  size: 20,
+                ),
+                title: Text(
+                  '${m.pressureSystolic.toInt()}/${m.pressureDiastolic.toInt()} мм рт.ст.',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                trailing: Text(m.timestamp.substring(11, 16)),
+              ),
+            ),
+          )
+          .toList(),
     );
   }
 
   Widget _buildAppointmentsList() {
-    if (_appointments.isEmpty) return const Card(child: ListTile(title: Text('Мероприятий нет')));
+    if (_appointments.isEmpty)
+      return const Card(child: ListTile(title: Text('Мероприятий нет')));
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     final reversedAppts = _appointments.reversed.toList();
-    final apptsToShow = _isAppointmentsExpanded ? reversedAppts : reversedAppts.take(3).toList();
+    final apptsToShow = _isAppointmentsExpanded
+        ? reversedAppts
+        : reversedAppts.take(3).toList();
 
     return Column(
       children: [
@@ -1045,19 +1432,22 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               final app = apptsToShow[index];
               Color? statusColor;
               IconData? statusIcon;
-              
+
               if (app.status == 'completed') {
                 statusColor = Colors.green;
                 statusIcon = Icons.check_circle_rounded;
-              } else if (app.status == 'missed') {
+              } else if (app.status == 'no_show' || app.status == 'missed') {
                 statusColor = Colors.red;
                 statusIcon = Icons.cancel_rounded;
-              } else if (app.status == 'waiting') {
+              } else if (app.status == 'pending' || app.status == 'waiting') {
                 statusColor = Colors.orange;
                 statusIcon = Icons.access_time_filled_rounded;
               }
 
-              final isLastInCollapsed = !_isAppointmentsExpanded && index == 2 && reversedAppts.length > 3;
+              final isLastInCollapsed =
+                  !_isAppointmentsExpanded &&
+                  index == 2 &&
+                  reversedAppts.length > 3;
 
               return Stack(
                 alignment: Alignment.bottomCenter,
@@ -1067,22 +1457,32 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                     margin: const EdgeInsets.only(bottom: 8),
                     color: statusColor?.withValues(alpha: 0.08),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16), 
+                      borderRadius: BorderRadius.circular(16),
                       side: BorderSide(
-                        color: statusColor?.withValues(alpha: 0.4) ?? colorScheme.outlineVariant.withValues(alpha: 0.4)
-                      )
+                        color:
+                            statusColor?.withValues(alpha: 0.4) ??
+                            colorScheme.outlineVariant.withValues(alpha: 0.4),
+                      ),
                     ),
                     child: ListTile(
-                      title: Text(app.title, style: const TextStyle(fontWeight: FontWeight.bold)), 
-                      subtitle: Text('${DateFormat('dd.MM.yyyy HH:mm').format(DateTime.parse(app.time))} • ${app.doctor} • Каб. ${app.room}'),
+                      title: Text(
+                        app.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        '${DateFormat('dd.MM.yyyy HH:mm').format(DateTime.parse(app.time))} • ${app.doctor} • Каб. ${app.room}',
+                      ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (statusIcon != null) 
+                          if (statusIcon != null)
                             Icon(statusIcon, color: statusColor, size: 20),
-                          if (!widget.isPatientView) 
+                          if (!widget.isPatientView)
                             IconButton(
-                              icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                              icon: const Icon(
+                                Icons.delete_outline_rounded,
+                                color: Colors.red,
+                              ),
                               onPressed: () => _deleteAppointment(app.id!),
                             ),
                         ],
@@ -1099,8 +1499,11 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: [
-                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0),
-                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.8),
+                                Theme.of(
+                                  context,
+                                ).scaffoldBackgroundColor.withValues(alpha: 0),
+                                Theme.of(context).scaffoldBackgroundColor
+                                    .withValues(alpha: 0.8),
                               ],
                             ),
                           ),
@@ -1117,17 +1520,22 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
             padding: const EdgeInsets.only(top: 8),
             child: Center(
               child: GestureDetector(
-                onTap: () => setState(() => _isAppointmentsExpanded = !_isAppointmentsExpanded),
+                onTap: () => setState(
+                  () => _isAppointmentsExpanded = !_isAppointmentsExpanded,
+                ),
                 child: MouseRegion(
                   cursor: SystemMouseCursors.click,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 28,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(30),
-                      color: _isAppointmentsExpanded 
-                        ? colorScheme.primaryContainer.withValues(alpha: 0.3)
-                        : colorScheme.primary.withValues(alpha: 0.1),
+                      color: _isAppointmentsExpanded
+                          ? colorScheme.primaryContainer.withValues(alpha: 0.3)
+                          : colorScheme.primary.withValues(alpha: 0.1),
                       border: Border.all(
                         color: colorScheme.primary.withValues(alpha: 0.2),
                         width: 1.5,
@@ -1147,7 +1555,9 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                         ),
                         const SizedBox(width: 12),
                         Text(
-                          _isAppointmentsExpanded ? 'СВЕРНУТЬ' : 'ВСЯ ИСТОРИЯ (${reversedAppts.length})',
+                          _isAppointmentsExpanded
+                              ? 'СВЕРНУТЬ'
+                              : 'ВСЯ ИСТОРИЯ (${reversedAppts.length})',
                           style: TextStyle(
                             color: colorScheme.primary,
                             fontWeight: FontWeight.w900,
@@ -1167,10 +1577,13 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   }
 
   Widget _buildMoodList() {
-    if (_moods.isEmpty) return const Card(child: ListTile(title: Text('Дневник пуст')));
-    
+    if (_moods.isEmpty)
+      return const Card(child: ListTile(title: Text('Дневник пуст')));
+
     final reversedMoods = _moods.reversed.toList();
-    final moodsToShow = _isMoodExpanded ? reversedMoods : reversedMoods.take(3).toList();
+    final moodsToShow = _isMoodExpanded
+        ? reversedMoods
+        : reversedMoods.take(3).toList();
     final colorScheme = Theme.of(context).colorScheme;
 
     return Column(
@@ -1196,7 +1609,8 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
               }
 
               // Эффект затухания для последней карточки в свернутом виде
-              final isLastInCollapsed = !_isMoodExpanded && index == 2 && reversedMoods.length > 3;
+              final isLastInCollapsed =
+                  !_isMoodExpanded && index == 2 && reversedMoods.length > 3;
 
               return Stack(
                 alignment: Alignment.bottomCenter,
@@ -1206,18 +1620,35 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                     margin: const EdgeInsets.only(bottom: 8),
                     color: scoreColor.withValues(alpha: 0.05),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16), 
-                      side: BorderSide(color: scoreColor.withValues(alpha: 0.3))
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                        color: scoreColor.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: ListTile(
                       onTap: () => _showMoodDetails(m),
-                      leading: Icon(moodIcon, color: scoreColor), 
-                      title: Text(m.comment, maxLines: 2, overflow: TextOverflow.ellipsis), 
-                      subtitle: Text('Оценка: ${m.score} • ${m.timestamp.substring(0, 16)}', style: TextStyle(color: scoreColor, fontWeight: FontWeight.bold)),
-                      trailing: !widget.isPatientView ? IconButton(
-                        icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
-                        onPressed: () => _deleteMood(m.id!),
-                      ) : null,
+                      leading: Icon(moodIcon, color: scoreColor),
+                      title: Text(
+                        m.comment,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        'Оценка: ${m.score} • ${m.timestamp.substring(0, 16)}',
+                        style: TextStyle(
+                          color: scoreColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      trailing: !widget.isPatientView
+                          ? IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline_rounded,
+                                color: Colors.red,
+                              ),
+                              onPressed: () => _deleteMood(m.id!),
+                            )
+                          : null,
                     ),
                   ),
                   if (isLastInCollapsed)
@@ -1230,8 +1661,11 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: [
-                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0),
-                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.8),
+                                Theme.of(
+                                  context,
+                                ).scaffoldBackgroundColor.withValues(alpha: 0),
+                                Theme.of(context).scaffoldBackgroundColor
+                                    .withValues(alpha: 0.8),
                               ],
                             ),
                           ),
@@ -1253,12 +1687,15 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                   cursor: SystemMouseCursors.click,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 28,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(30),
-                      color: _isMoodExpanded 
-                        ? colorScheme.primaryContainer.withValues(alpha: 0.3)
-                        : colorScheme.primary.withValues(alpha: 0.1),
+                      color: _isMoodExpanded
+                          ? colorScheme.primaryContainer.withValues(alpha: 0.3)
+                          : colorScheme.primary.withValues(alpha: 0.1),
                       border: Border.all(
                         color: colorScheme.primary.withValues(alpha: 0.2),
                         width: 1.5,
@@ -1278,7 +1715,9 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                         ),
                         const SizedBox(width: 12),
                         Text(
-                          _isMoodExpanded ? 'СВЕРНУТЬ' : 'ВСЯ ИСТОРИЯ (${reversedMoods.length})',
+                          _isMoodExpanded
+                              ? 'СВЕРНУТЬ'
+                              : 'ВСЯ ИСТОРИЯ (${reversedMoods.length})',
                           style: TextStyle(
                             color: colorScheme.primary,
                             fontWeight: FontWeight.w900,
@@ -1298,10 +1737,13 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   }
 
   Widget _buildQuestionnaireResults() {
-    if (_qResults.isEmpty) return const Card(child: ListTile(title: Text('Нет результатов')));
-    
+    if (_qResults.isEmpty)
+      return const Card(child: ListTile(title: Text('Нет результатов')));
+
     final reversedQResults = _qResults.reversed.toList();
-    final qResultsToShow = _isQuestionnaireExpanded ? reversedQResults : reversedQResults.take(3).toList();
+    final qResultsToShow = _isQuestionnaireExpanded
+        ? reversedQResults
+        : reversedQResults.take(3).toList();
     final colorScheme = Theme.of(context).colorScheme;
 
     return Column(
@@ -1322,7 +1764,10 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                 resultColor = Colors.red;
               }
 
-              final isLastInCollapsed = !_isQuestionnaireExpanded && index == 2 && reversedQResults.length > 3;
+              final isLastInCollapsed =
+                  !_isQuestionnaireExpanded &&
+                  index == 2 &&
+                  reversedQResults.length > 3;
 
               return Stack(
                 alignment: Alignment.bottomCenter,
@@ -1332,31 +1777,45 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                     margin: const EdgeInsets.only(bottom: 8),
                     color: resultColor.withValues(alpha: 0.05),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16), 
-                      side: BorderSide(color: resultColor.withValues(alpha: 0.3))
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                        color: resultColor.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: ListTile(
-                      title: Text(res.title), 
+                      title: Text(res.title),
                       subtitle: Text('Дата: ${res.date.substring(0, 16)}'),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: resultColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: resultColor.withValues(alpha: 0.4)),
+                              border: Border.all(
+                                color: resultColor.withValues(alpha: 0.4),
+                              ),
                             ),
                             child: Text(
-                              '${res.totalScore} баллов', 
-                              style: TextStyle(color: resultColor, fontWeight: FontWeight.bold)
+                              '${res.totalScore} баллов',
+                              style: TextStyle(
+                                color: resultColor,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                          if (!widget.isPatientView) 
+                          if (!widget.isPatientView)
                             IconButton(
-                              icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
-                              onPressed: () => _deleteQuestionnaireResult(res.id!),
+                              icon: const Icon(
+                                Icons.delete_outline_rounded,
+                                color: Colors.red,
+                              ),
+                              onPressed: () =>
+                                  _deleteQuestionnaireResult(res.id!),
                             ),
                         ],
                       ),
@@ -1372,8 +1831,11 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: [
-                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0),
-                                Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.8),
+                                Theme.of(
+                                  context,
+                                ).scaffoldBackgroundColor.withValues(alpha: 0),
+                                Theme.of(context).scaffoldBackgroundColor
+                                    .withValues(alpha: 0.8),
                               ],
                             ),
                           ),
@@ -1390,17 +1852,22 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
             padding: const EdgeInsets.only(top: 8),
             child: Center(
               child: GestureDetector(
-                onTap: () => setState(() => _isQuestionnaireExpanded = !_isQuestionnaireExpanded),
+                onTap: () => setState(
+                  () => _isQuestionnaireExpanded = !_isQuestionnaireExpanded,
+                ),
                 child: MouseRegion(
                   cursor: SystemMouseCursors.click,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 28,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(30),
-                      color: _isQuestionnaireExpanded 
-                        ? colorScheme.primaryContainer.withValues(alpha: 0.3)
-                        : colorScheme.primary.withValues(alpha: 0.1),
+                      color: _isQuestionnaireExpanded
+                          ? colorScheme.primaryContainer.withValues(alpha: 0.3)
+                          : colorScheme.primary.withValues(alpha: 0.1),
                       border: Border.all(
                         color: colorScheme.primary.withValues(alpha: 0.2),
                         width: 1.5,
@@ -1420,7 +1887,9 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                         ),
                         const SizedBox(width: 12),
                         Text(
-                          _isQuestionnaireExpanded ? 'СВЕРНУТЬ' : 'ВСЯ ИСТОРИЯ (${reversedQResults.length})',
+                          _isQuestionnaireExpanded
+                              ? 'СВЕРНУТЬ'
+                              : 'ВСЯ ИСТОРИЯ (${reversedQResults.length})',
                           style: TextStyle(
                             color: colorScheme.primary,
                             fontWeight: FontWeight.w900,

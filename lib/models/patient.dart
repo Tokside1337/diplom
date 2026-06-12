@@ -181,11 +181,21 @@ class Patient {
     };
   }
 
+  static String _cleanDate(String? date) {
+    if (date == null || date.isEmpty) return '';
+    if (date.contains('T')) {
+      final parts = date.split('T');
+      if (parts[1].startsWith('00:00:00')) return parts[0];
+      return date.replaceAll('Z', '').replaceAll('T', ' ');
+    }
+    return date;
+  }
+
   factory Patient.fromMap(Map<String, dynamic> map) {
     return Patient(
       id: map['id'],
       name: map['name'] ?? '',
-      birthDate: map['birth_date'] ?? '',
+      birthDate: _cleanDate(map['birth_date'] ?? map['birthDate']),
       gender: map['gender'],
       snils: map['snils'],
       passportData: map['passport_data'],
@@ -194,7 +204,7 @@ class Patient {
       representativeData: map['representative_data'],
       photoPath: map['photo_path'],
       skkNumber: map['skk_number'],
-      skkDate: map['skk_date'],
+      skkDate: _cleanDate(map['skk_date']),
       issuedByLpu: map['issued_by_lpu'],
       mainDiagnosisMkb: map['main_diagnosis_mkb'],
       secondaryDiagnosesMkb: map['secondary_diagnoses_mkb'],
@@ -206,10 +216,10 @@ class Patient {
       arrivalPurpose: map['arrival_purpose'],
       fundingSource: map['funding_source'],
       sanatoriumProfile: map['sanatorium_profile'],
-      plannedArrival: map['planned_arrival'],
-      plannedDeparture: map['planned_departure'],
-      actualArrival: map['actual_arrival'],
-      actualDeparture: map['actual_departure'],
+      plannedArrival: _cleanDate(map['planned_arrival']),
+      plannedDeparture: _cleanDate(map['planned_departure']),
+      actualArrival: _cleanDate(map['actual_arrival']),
+      actualDeparture: _cleanDate(map['actual_departure']),
       roomNumber: map['room_number'],
       building: map['building'],
       floor: map['floor'],

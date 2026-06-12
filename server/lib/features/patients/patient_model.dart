@@ -166,8 +166,10 @@ class PatientModel {
 
   static String _formatDate(dynamic val) {
     if (val == null) return '';
-    if (val is DateTime) return val.toIso8601String();
-    return val.toString();
+    if (val is DateTime) return val.toIso8601String().split('T')[0];
+    String s = val.toString();
+    if (s.contains('T')) return s.split('T')[0];
+    return s;
   }
 
   factory PatientModel.fromMap(Map<String, dynamic> map) {

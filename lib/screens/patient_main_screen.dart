@@ -299,7 +299,10 @@ class _ProfileTab extends StatelessWidget {
           _buildInfoSection(context, 'ЛИЧНЫЕ ДАННЫЕ', [
             _ProfileItem(Icons.badge_outlined, 'ФИО', patient.name),
             _ProfileItem(Icons.cake_outlined, 'Дата рождения', patient.birthDate),
-            _ProfileItem(Icons.wc_rounded, 'Пол', patient.gender ?? 'Не указан'),
+            _ProfileItem(Icons.wc_rounded, 'Пол', 
+              patient.gender == 'male' ? 'Мужской' : 
+              patient.gender == 'female' ? 'Женский' : 
+              (patient.gender ?? 'Не указан')),
             _ProfileItem(Icons.fingerprint_rounded, 'СНИЛС', patient.snils ?? 'Не указан'),
             _ProfileItem(Icons.description_outlined, 'Паспорт', patient.passportData ?? 'Не указан'),
             _ProfileItem(Icons.phone_android_rounded, 'Телефон', patient.phone ?? 'Не указан'),

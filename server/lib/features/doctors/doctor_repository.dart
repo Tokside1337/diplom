@@ -1,3 +1,4 @@
+import 'package:postgres/postgres.dart';
 import '../../core/database/database_service.dart';
 import 'doctor_model.dart';
 
@@ -6,13 +7,13 @@ class DoctorRepository {
   DoctorRepository(this._db);
 
   Future<List<DoctorModel>> findAll() async {
-    final result = await _db.execute('SELECT * FROM doctors ORDER BY id');
+    final result = await _db.pool.execute(Sql.named('SELECT * FROM doctors ORDER BY id'));
     return result.map((r) => DoctorModel.fromMap(r.toColumnMap())).toList();
   }
 
   Future<DoctorModel?> findById(int id) async {
-    final result = await _db.execute(
-      'SELECT * FROM doctors WHERE id = @id',
+    final result = await _db.pool.execute(
+      Sql.named('SELECT * FROM doctors WHERE id = @id'),
       parameters: {'id': id},
     );
     if (result.isEmpty) return null;
@@ -20,8 +21,8 @@ class DoctorRepository {
   }
 
   Future<int> create(DoctorModel doctor) async {
-    final result = await _db.execute(
-      'INSERT INTO doctors (name, specialization, phone, cabinet) VALUES (@n, @s, @p, @c) RETURNING id',
+    final result = await _db.pool.execute(
+      Sql.named('INSERT INTO doctors (name, specialization, phone, cabinet) VALUES (@n, @s, @p, @c) RETURNING id'),
       parameters: {
         'n': doctor.name,
         's': doctor.specialization,
@@ -33,8 +34,8 @@ class DoctorRepository {
   }
 
   Future<void> update(DoctorModel doctor) async {
-    await _db.execute(
-      'UPDATE doctors SET name=@n, specialization=@s, phone=@p, cabinet=@c WHERE id=@id',
+    await _db.pool.execute(
+      Sql.named('UPDATE doctors SET name=@n, specialization=@s, phone=@p, cabinet=@c WHERE id=@id'),
       parameters: {
         'id': doctor.id,
         'n': doctor.name,
@@ -46,8 +47,8 @@ class DoctorRepository {
   }
 
   Future<void> delete(int id) async {
-    await _db.execute(
-      'DELETE FROM doctors WHERE id = @id',
+    await _db.pool.execute(
+      Sql.named('DELETE FROM doctors WHERE id = @id'),
       parameters: {'id': id},
     );
   }

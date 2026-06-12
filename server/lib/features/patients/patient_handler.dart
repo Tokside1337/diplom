@@ -16,7 +16,7 @@ class PatientHandler {
       final params = req.url.queryParameters;
       final limit = int.tryParse(params['limit'] ?? '100') ?? 100;
       final offset = int.tryParse(params['offset'] ?? '0') ?? 0;
-      
+
       final patients = await _repo.findAll(limit: limit, offset: offset);
       return ResponseHelper.ok(patients.map((p) => p.toMap()).toList());
     });
@@ -38,9 +38,18 @@ class PatientHandler {
       // The snake_case conversion logic was in the original handler
       final Map<String, dynamic> params = {};
       p.forEach((key, value) {
-        String snakeKey = key.replaceAllMapped(RegExp(r'([A-Z])'), (match) => '_${match.group(1)!.toLowerCase()}');
+        String snakeKey = key.replaceAllMapped(
+          RegExp(r'([A-Z])'),
+          (match) => '_${match.group(1)!.toLowerCase()}',
+        );
         params[snakeKey] = value;
       });
+      params
+        ..remove('diagnosis')
+        ..remove('contraindications')
+        ..remove('treatment_goals')
+        ..remove('dynamics')
+        ..remove('final_recommendations');
       await _repo.update(PatientModel.fromMap(params));
       return Response.ok('Updated');
     });

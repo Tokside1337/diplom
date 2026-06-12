@@ -34,12 +34,12 @@ class _EMKScreenState extends State<EMKScreen> {
     try {
       final emkFuture = _dbService.getEMK(widget.patient.id!);
       final patientFuture = _dbService.getPatientById(widget.patient.id!);
-      
       final results = await Future.wait([emkFuture, patientFuture]);
-      
+
       if (mounted) {
         setState(() {
-          _emk = (results[0] as EMK?) ??
+          _emk =
+              (results[0] as EMK?) ??
               EMK(
                 patientId: widget.patient.id!,
                 createdAt: DateTime.now().toIso8601String(),
@@ -53,50 +53,131 @@ class _EMKScreenState extends State<EMKScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка загрузки: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка загрузки: $e')));
       }
     }
   }
 
   Future<void> _saveAll() async {
     if (_emk == null || _isSaving) return;
-    
+
     setState(() => _isSaving = true);
     try {
-      // 1. Save EMK
       await _dbService.saveEMK(_emk!);
-      
-      // 2. Save Patient (which contains СКК fields)
-      await _dbService.updatePatient(_patient);
-      
+
+      final latestPatient = await _dbService.getPatientById(_patient.id!);
+      final patientToSave = latestPatient == null
+          ? _patient
+          : _mergeMedicalCardFields(latestPatient, _patient);
+      final patientSaved = await _dbService.updatePatient(
+        patientToSave,
+        preserveMedicalCard: false,
+      );
+      if (!patientSaved) {
+        throw Exception(
+          'Не удалось сохранить данные санаторно-курортной карты',
+        );
+      }
+      _patient = patientToSave;
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Все данные успешно сохранены')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Все данные успешно сохранены')),
+        );
         setState(() => _isSaving = false);
         _loadData();
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка сохранения: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка сохранения: $e')));
       }
     }
   }
 
-  void _editMedicalField(String label, String? currentValue, Function(String) onUpdate) {
+  Patient _mergeMedicalCardFields(Patient base, Patient edited) {
+    return Patient(
+      id: base.id,
+      name: base.name,
+      birthDate: base.birthDate,
+      relativeContact: base.relativeContact,
+      doctorId: base.doctorId,
+      gender: base.gender,
+      snils: base.snils,
+      passportData: base.passportData,
+      phone: base.phone,
+      representativeData: base.representativeData,
+      photoPath: base.photoPath,
+      skkNumber: edited.skkNumber,
+      skkDate: edited.skkDate,
+      issuedByLpu: edited.issuedByLpu,
+      mainDiagnosisMkb: edited.mainDiagnosisMkb,
+      secondaryDiagnosesMkb: base.secondaryDiagnosesMkb,
+      checkInExamination: base.checkInExamination,
+      healthGroup: edited.healthGroup,
+      dietTable: edited.dietTable,
+      forbiddenProcedures: edited.forbiddenProcedures,
+      mobilityRegime: edited.mobilityRegime,
+      status: base.status,
+      arrivalPurpose: base.arrivalPurpose,
+      fundingSource: base.fundingSource,
+      sanatoriumProfile: base.sanatoriumProfile,
+      plannedArrival: base.plannedArrival,
+      plannedDeparture: base.plannedDeparture,
+      actualArrival: base.actualArrival,
+      actualDeparture: base.actualDeparture,
+      roomNumber: base.roomNumber,
+      building: base.building,
+      floor: base.floor,
+      bedDaysCount: base.bedDaysCount,
+      roomCategory: base.roomCategory,
+      dietType: base.dietType,
+      specialNeeds: base.specialNeeds,
+      lfkGroup: base.lfkGroup,
+      culturalParticipation: base.culturalParticipation,
+      voucherType: base.voucherType,
+      extraServices: base.extraServices,
+      companionData: base.companionData,
+      treatmentEfficiency: base.treatmentEfficiency,
+      treatmentDurationCategory: base.treatmentDurationCategory,
+      benefitCategory: base.benefitCategory,
+      egiszId: base.egiszId,
+      fssReferralId: base.fssReferralId,
+      isEgiszActivated: base.isEgiszActivated,
+      diagnosis: base.diagnosis,
+      contraindications: base.contraindications,
+      treatmentGoals: base.treatmentGoals,
+      dynamics: base.dynamics,
+      finalRecommendations: base.finalRecommendations,
+    );
+  }
+
+  void _editMedicalField(
+    String label,
+    String? currentValue,
+    Function(String) onUpdate,
+  ) {
     final controller = TextEditingController(text: currentValue);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Редактировать: $label'),
         content: TextField(
-          controller: controller, 
+          controller: controller,
           maxLines: 3,
           decoration: InputDecoration(
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Отмена'),
+          ),
           FilledButton(
             onPressed: () {
               final newValue = controller.text.trim();
@@ -119,14 +200,17 @@ class _EMKScreenState extends State<EMKScreen> {
       builder: (context) => AlertDialog(
         title: Text('Редактировать: $field'),
         content: TextField(
-          controller: controller, 
+          controller: controller,
           maxLines: 3,
           decoration: InputDecoration(
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Отмена'),
+          ),
           FilledButton(
             onPressed: () {
               setState(() {
@@ -148,20 +232,25 @@ class _EMKScreenState extends State<EMKScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Новая запись'),
         content: TextField(
-          controller: controller, 
-          maxLines: 3, 
+          controller: controller,
+          maxLines: 3,
           decoration: InputDecoration(
             hintText: 'Введите данные осмотра...',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Отмена'),
+          ),
           FilledButton(
             onPressed: () {
               if (controller.text.trim().isNotEmpty) {
                 setState(() {
-                  list.add('${DateFormat('dd.MM HH:mm').format(DateTime.now())}: ${controller.text.trim()}');
+                  list.add(
+                    '${DateFormat('dd.MM HH:mm').format(DateTime.now())}: ${controller.text.trim()}',
+                  );
                 });
               }
               Navigator.pop(context);
@@ -175,7 +264,9 @@ class _EMKScreenState extends State<EMKScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     final isWide = MediaQuery.of(context).size.width > 900;
 
     return Scaffold(
@@ -188,50 +279,63 @@ class _EMKScreenState extends State<EMKScreen> {
             tooltip: 'Печать ЭМК',
           ),
           if (widget.isDoctor)
-            _isSaving 
-              ? const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))))
-              : IconButton(
-                  icon: const Icon(Icons.save_rounded, color: Colors.blue),
-                  onPressed: _saveAll,
-                  tooltip: 'Сохранить все изменения',
-                )
+            _isSaving
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.save_rounded, color: Colors.blue),
+                    onPressed: _saveAll,
+                    tooltip: 'Сохранить все изменения',
+                  ),
         ],
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: isWide ? 1000 : double.infinity),
+          constraints: BoxConstraints(
+            maxWidth: isWide ? 1000 : double.infinity,
+          ),
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
               _buildMedicalInfoSection(),
-              _buildSection('2. ДИАГНОЗЫ (КЛИНИЧЕСКИЕ)', _emk!.diagnoses, [
+              _buildSection('2. Диагнозы (клинические)', _emk!.diagnoses, [
                 'Основной диагноз',
                 'Сопутствующие',
                 'Осложнения',
                 'Направление',
-                'Функциональный (МКФ)'
+                'Функциональный (МКФ)',
               ]),
-              _buildSection('3. ПРОТИВОПОКАЗАНИЯ (БЛОКИРОВКА)', _emk!.contraindications, [
+              _buildSection('3. Противопоказания', _emk!.contraindications, [
                 'Абсолютные',
                 'Относительные',
                 'Аллергены',
                 'Запрещенные процедуры IDs',
-                'Макс. нагрузка (кг)'
+                'Макс. нагрузка (кг)',
               ]),
-              _buildSection('4. ЦЕЛИ ЛЕЧЕНИЯ (SMART)', _emk!.treatmentGoals, [
+              _buildSection('4. Цели лечения (SMART)', _emk!.treatmentGoals, [
                 'Потенциал (high/medium/low)',
                 'SMART-цели',
                 'Шкалы на входе (MRC, Berg, Barthel)',
-                'Приоритеты'
+                'Приоритеты',
               ]),
-              _buildListSection('5.1 ЕЖЕДНЕВНЫЕ ЗАПИСИ (ДНЕВНИК)', _emk!.dailyLogs),
-              _buildListSection('5.2 ЭТАПНЫЕ ОСМОТРЫ', _emk!.stageReviews),
-              _buildSection('6. ИТОГОВЫЕ РЕКОМЕНДАЦИИ', _emk!.finalRecommendations, [
-                'Эпикриз',
-                'Итоговый статус',
-                'Домашний режим',
-                'Лекарства'
-              ]),
+              _buildListSection(
+                '5.1 Ежедневные записи (дневник)',
+                _emk!.dailyLogs,
+              ),
+              _buildListSection('5.2 Этапные осмотры', _emk!.stageReviews),
+              _buildSection(
+                '6. Итоговые рекомендации',
+                _emk!.finalRecommendations,
+                ['Эпикриз', 'Итоговый статус', 'Домашний режим', 'Лекарства'],
+              ),
               const SizedBox(height: 80),
             ],
           ),
@@ -249,30 +353,92 @@ class _EMKScreenState extends State<EMKScreen> {
         children: [
           const Padding(
             padding: EdgeInsets.all(16),
-            child: Text('1. САНАТОРНО-КУРОРТНАЯ КАРТА (СКК)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blue)),
+            child: Text(
+              '1. Санаторно-курортная карта (СКК)',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.blue,
+              ),
+            ),
           ),
-          _buildMedicalTile('Номер СКК', _patient.skkNumber, Icons.history_edu_rounded, 'skkNumber'),
-          _buildMedicalTile('Дата выдачи', _patient.skkDate, Icons.calendar_month_rounded, 'skkDate'),
-          _buildMedicalTile('Кем выдана', _patient.issuedByLpu, Icons.account_balance_rounded, 'issuedByLpu'),
-          _buildMedicalTile('Основной диагноз (МКБ)', _patient.mainDiagnosisMkb, Icons.medical_services_rounded, 'mainDiagnosisMkb'),
-          _buildMedicalTile('Диет. стол (по Певзнеру)', _patient.dietTable, Icons.restaurant_rounded, 'dietTable'),
-          _buildMedicalTile('Двигательный режим', _patient.mobilityRegime, Icons.directions_run_rounded, 'mobilityRegime'),
-          _buildMedicalTile('Группа здоровья', _patient.healthGroup, Icons.health_and_safety_rounded, 'healthGroup'),
-          _buildMedicalTile('Запрещенные процедуры', _patient.forbiddenProcedures, Icons.block_rounded, 'forbiddenProcedures'),
+          _buildMedicalTile(
+            'Номер СКК',
+            _patient.skkNumber,
+            Icons.history_edu_rounded,
+            'skkNumber',
+          ),
+          _buildMedicalTile(
+            'Дата выдачи',
+            _patient.skkDate,
+            Icons.calendar_month_rounded,
+            'skkDate',
+          ),
+          _buildMedicalTile(
+            'Кем выдана',
+            _patient.issuedByLpu,
+            Icons.account_balance_rounded,
+            'issuedByLpu',
+          ),
+          _buildMedicalTile(
+            'Основной диагноз (МКБ)',
+            _patient.mainDiagnosisMkb,
+            Icons.medical_services_rounded,
+            'mainDiagnosisMkb',
+          ),
+          _buildMedicalTile(
+            'Диет. стол (по Певзнеру)',
+            _patient.dietTable,
+            Icons.restaurant_rounded,
+            'dietTable',
+          ),
+          _buildMedicalTile(
+            'Двигательный режим',
+            _patient.mobilityRegime,
+            Icons.directions_run_rounded,
+            'mobilityRegime',
+          ),
+          _buildMedicalTile(
+            'Группа здоровья',
+            _patient.healthGroup,
+            Icons.health_and_safety_rounded,
+            'healthGroup',
+          ),
+          _buildMedicalTile(
+            'Запрещенные процедуры',
+            _patient.forbiddenProcedures,
+            Icons.block_rounded,
+            'forbiddenProcedures',
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildMedicalTile(String label, String? value, IconData icon, String fieldName) {
+  Widget _buildMedicalTile(
+    String label,
+    String? value,
+    IconData icon,
+    String fieldName,
+  ) {
     return ListTile(
       leading: Icon(icon, size: 20, color: Colors.blue[700]),
-      title: Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-      subtitle: Text(value ?? '—', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
-      trailing: widget.isDoctor ? const Icon(Icons.edit_rounded, size: 18) : null,
-      onTap: widget.isDoctor ? () => _editMedicalField(label, value, (val) {
-        _patient = _updatePatientLocalField(_patient, fieldName, val);
-      }) : null,
+      title: Text(
+        label,
+        style: const TextStyle(fontSize: 12, color: Colors.grey),
+      ),
+      subtitle: Text(
+        value ?? '—',
+        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+      ),
+      trailing: widget.isDoctor
+          ? const Icon(Icons.edit_rounded, size: 18)
+          : null,
+      onTap: widget.isDoctor
+          ? () => _editMedicalField(label, value, (val) {
+              _patient = _updatePatientLocalField(_patient, fieldName, val);
+            })
+          : null,
     );
   }
 
@@ -292,12 +458,18 @@ class _EMKScreenState extends State<EMKScreen> {
       skkNumber: fieldName == 'skkNumber' ? value : p.skkNumber,
       skkDate: fieldName == 'skkDate' ? value : p.skkDate,
       issuedByLpu: fieldName == 'issuedByLpu' ? value : p.issuedByLpu,
-      mainDiagnosisMkb: fieldName == 'mainDiagnosisMkb' ? value : p.mainDiagnosisMkb,
+      mainDiagnosisMkb: fieldName == 'mainDiagnosisMkb'
+          ? value
+          : p.mainDiagnosisMkb,
       secondaryDiagnosesMkb: p.secondaryDiagnosesMkb,
-      checkInExamination: fieldName == 'checkInExamination' ? value : p.checkInExamination,
+      checkInExamination: fieldName == 'checkInExamination'
+          ? value
+          : p.checkInExamination,
       healthGroup: fieldName == 'healthGroup' ? value : p.healthGroup,
       dietTable: fieldName == 'dietTable' ? value : p.dietTable,
-      forbiddenProcedures: fieldName == 'forbiddenProcedures' ? value : p.forbiddenProcedures,
+      forbiddenProcedures: fieldName == 'forbiddenProcedures'
+          ? value
+          : p.forbiddenProcedures,
       mobilityRegime: fieldName == 'mobilityRegime' ? value : p.mobilityRegime,
       status: p.status,
       arrivalPurpose: p.arrivalPurpose,
@@ -333,7 +505,11 @@ class _EMKScreenState extends State<EMKScreen> {
     );
   }
 
-  Widget _buildSection(String title, Map<String, dynamic> data, List<String> fields) {
+  Widget _buildSection(
+    String title,
+    Map<String, dynamic> data,
+    List<String> fields,
+  ) {
     return Card(
       margin: const EdgeInsets.only(bottom: 20),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -342,17 +518,52 @@ class _EMKScreenState extends State<EMKScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blue)),
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.blue,
+              ),
+            ),
           ),
-          ...fields.map((f) => ListTile(
-                title: Text(f, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                subtitle: Text(data[f]?.toString() ?? 'Не заполнено'),
-                trailing: widget.isDoctor ? const Icon(Icons.edit_rounded, size: 18) : null,
-                onTap: widget.isDoctor ? () => _editEMKField(data, f) : null,
-              )),
+          ...fields.asMap().entries.map((entry) {
+            final index = entry.key;
+            final field = entry.value;
+            final value = _sectionFieldValue(data, field, index);
+
+            return ListTile(
+              title: Text(
+                field,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              subtitle: Text(value?.toString() ?? 'Не заполнено'),
+              trailing: widget.isDoctor
+                  ? const Icon(Icons.edit_rounded, size: 18)
+                  : null,
+              onTap: widget.isDoctor
+                  ? () {
+                      if (!data.containsKey(field) && value != null) {
+                        data[field] = value;
+                      }
+                      _editEMKField(data, field);
+                    }
+                  : null,
+            );
+          }),
         ],
       ),
     );
+  }
+
+  dynamic _sectionFieldValue(
+    Map<String, dynamic> data,
+    String field,
+    int index,
+  ) {
+    if (data.containsKey(field)) return data[field];
+    if (index >= data.values.length) return null;
+    return data.values.elementAt(index);
   }
 
   Widget _buildListSection(String title, List<dynamic> list) {
@@ -366,17 +577,33 @@ class _EMKScreenState extends State<EMKScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blue)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.blue,
+                  ),
+                ),
                 if (widget.isDoctor)
-                  IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: () => _addEMKLogEntry(list))
+                  IconButton(
+                    icon: const Icon(Icons.add_circle_outline),
+                    onPressed: () => _addEMKLogEntry(list),
+                  ),
               ],
             ),
           ),
-          if (list.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text('Записей нет', style: TextStyle(fontStyle: FontStyle.italic))),
-          ...list.map((item) => ListTile(
-                title: Text(item.toString()),
-                dense: true,
-              )),
+          if (list.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Записей нет',
+                style: TextStyle(fontStyle: FontStyle.italic),
+              ),
+            ),
+          ...list.map(
+            (item) => ListTile(title: Text(item.toString()), dense: true),
+          ),
         ],
       ),
     );

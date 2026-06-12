@@ -28,8 +28,14 @@ class MoodModel {
 
   static String _formatDate(dynamic val) {
     if (val == null) return '';
-    if (val is DateTime) return val.toIso8601String();
-    return val.toString();
+    if (val is DateTime) {
+      String s = val.toIso8601String();
+      if (s.contains('T00:00:00')) return s.split('T')[0];
+      return s;
+    }
+    String s = val.toString();
+    if (s.contains('T00:00:00')) return s.split('T')[0];
+    return s;
   }
 
   factory MoodModel.fromMap(Map<String, dynamic> map) {

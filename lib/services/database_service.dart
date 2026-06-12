@@ -34,14 +34,17 @@ mixin ApiClient {
     AIService.setToken(token);
   }
 
-  Future<http.Response?> _safeRequest(Future<http.Response> Function() request, String label) async {
+  Future<http.Response?> _safeRequest(
+    Future<http.Response> Function() request,
+    String label,
+  ) async {
     try {
       final response = await request();
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return response;
       }
       debugPrint('API Error [$label]: ${response.statusCode} ${response.body}');
-      return response; 
+      return response;
     } catch (e) {
       debugPrint('Network Error [$label]: $e');
     }
@@ -65,9 +68,9 @@ class DatabaseService with ApiClient {
       ),
       'loginUser',
     );
-    
+
     if (res == null || res.statusCode != 200) return null;
-    
+
     try {
       final data = jsonDecode(res.body);
       final String? token = data['accessToken'];
@@ -84,7 +87,10 @@ class DatabaseService with ApiClient {
   }
 
   Future<List<User>> getAllUsers() async {
-    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/users'), headers: headers), 'getAllUsers');
+    final res = await _safeRequest(
+      () => http.get(Uri.parse('$baseUrl/users'), headers: headers),
+      'getAllUsers',
+    );
     if (res == null || res.statusCode != 200) return [];
     try {
       final List d = jsonDecode(res.body);
@@ -117,12 +123,17 @@ class DatabaseService with ApiClient {
     );
   }
 
-  Future<void> deleteUser(int id) async => 
-      await _safeRequest(() => http.delete(Uri.parse('$baseUrl/users/$id'), headers: headers), 'deleteUser');
+  Future<void> deleteUser(int id) async => await _safeRequest(
+    () => http.delete(Uri.parse('$baseUrl/users/$id'), headers: headers),
+    'deleteUser',
+  );
 
   // --- DOCTORS ---
   Future<List<Doctor>> getDoctors() async {
-    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/doctors'), headers: headers), 'getDoctors');
+    final res = await _safeRequest(
+      () => http.get(Uri.parse('$baseUrl/doctors'), headers: headers),
+      'getDoctors',
+    );
     if (res == null || res.statusCode != 200) return [];
     try {
       final List d = jsonDecode(res.body);
@@ -134,7 +145,10 @@ class DatabaseService with ApiClient {
   }
 
   Future<Doctor?> getDoctorById(int id) async {
-    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/doctors/$id'), headers: headers), 'getDoctorById');
+    final res = await _safeRequest(
+      () => http.get(Uri.parse('$baseUrl/doctors/$id'), headers: headers),
+      'getDoctorById',
+    );
     if (res == null || res.statusCode != 200) return null;
     try {
       return Doctor.fromMap(jsonDecode(res.body));
@@ -170,12 +184,17 @@ class DatabaseService with ApiClient {
     );
   }
 
-  Future<void> deleteDoctor(int id) async => 
-      await _safeRequest(() => http.delete(Uri.parse('$baseUrl/doctors/$id'), headers: headers), 'deleteDoctor');
+  Future<void> deleteDoctor(int id) async => await _safeRequest(
+    () => http.delete(Uri.parse('$baseUrl/doctors/$id'), headers: headers),
+    'deleteDoctor',
+  );
 
   // --- PATIENTS ---
   Future<List<Patient>> getPatients() async {
-    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/patients'), headers: headers), 'getPatients');
+    final res = await _safeRequest(
+      () => http.get(Uri.parse('$baseUrl/patients'), headers: headers),
+      'getPatients',
+    );
     if (res == null || res.statusCode != 200) return [];
     try {
       final List d = jsonDecode(res.body);
@@ -187,7 +206,10 @@ class DatabaseService with ApiClient {
   }
 
   Future<Patient?> getPatientById(int id) async {
-    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/patients/$id'), headers: headers), 'getPatientById');
+    final res = await _safeRequest(
+      () => http.get(Uri.parse('$baseUrl/patients/$id'), headers: headers),
+      'getPatientById',
+    );
     if (res == null || res.statusCode != 200) return null;
     try {
       return Patient.fromMap(jsonDecode(res.body));
@@ -199,7 +221,11 @@ class DatabaseService with ApiClient {
 
   Future<int?> insertPatient(Patient p) async {
     final res = await _safeRequest(
-      () => http.post(Uri.parse('$baseUrl/patients'), body: jsonEncode(p.toMap()), headers: headers),
+      () => http.post(
+        Uri.parse('$baseUrl/patients'),
+        body: jsonEncode(p.toMap()),
+        headers: headers,
+      ),
       'insertPatient',
     );
     if (res != null && res.statusCode == 200) {
@@ -208,20 +234,143 @@ class DatabaseService with ApiClient {
     return null;
   }
 
-  Future<bool> updatePatient(Patient p) async {
+  Future<bool> updatePatient(
+    Patient p, {
+    bool preserveMedicalCard = true,
+  }) async {
+    final patientToSave = preserveMedicalCard && p.id != null
+        ? _preserveMedicalCardFields(p, await getPatientById(p.id!))
+        : p;
+    final patientData = Map<String, dynamic>.from(patientToSave.toMap())
+      ..remove('diagnosis')
+      ..remove('contraindications')
+      ..remove('treatment_goals')
+      ..remove('dynamics')
+      ..remove('final_recommendations');
+    patientData['status'] = _normalizeAdmissionStatus(patientData['status']);
+
     final res = await _safeRequest(
-      () => http.put(Uri.parse('$baseUrl/patients'), body: jsonEncode(p.toMap()), headers: headers), 
-      'updatePatient'
+      () => http.put(
+        Uri.parse('$baseUrl/patients'),
+        body: jsonEncode(patientData),
+        headers: headers,
+      ),
+      'updatePatient',
     );
     return res != null && res.statusCode >= 200 && res.statusCode < 300;
   }
 
-  Future<void> deletePatient(int id) async => 
-      await _safeRequest(() => http.delete(Uri.parse('$baseUrl/patients/$id'), headers: headers), 'deletePatient');
+  Patient _preserveMedicalCardFields(Patient edited, Patient? latest) {
+    if (latest == null) return edited;
+
+    return Patient(
+      id: edited.id,
+      name: edited.name,
+      birthDate: edited.birthDate,
+      relativeContact: edited.relativeContact,
+      doctorId: edited.doctorId,
+      gender: edited.gender,
+      snils: edited.snils,
+      passportData: edited.passportData,
+      phone: edited.phone,
+      representativeData: edited.representativeData,
+      photoPath: edited.photoPath,
+      skkNumber: latest.skkNumber,
+      skkDate: latest.skkDate,
+      issuedByLpu: latest.issuedByLpu,
+      mainDiagnosisMkb: latest.mainDiagnosisMkb,
+      secondaryDiagnosesMkb: latest.secondaryDiagnosesMkb,
+      checkInExamination: latest.checkInExamination,
+      healthGroup: latest.healthGroup,
+      dietTable: latest.dietTable,
+      forbiddenProcedures: latest.forbiddenProcedures,
+      mobilityRegime: latest.mobilityRegime,
+      status: edited.status,
+      arrivalPurpose: edited.arrivalPurpose,
+      fundingSource: edited.fundingSource,
+      sanatoriumProfile: edited.sanatoriumProfile,
+      plannedArrival: edited.plannedArrival,
+      plannedDeparture: edited.plannedDeparture,
+      actualArrival: edited.actualArrival,
+      actualDeparture: edited.actualDeparture,
+      roomNumber: edited.roomNumber,
+      building: edited.building,
+      floor: edited.floor,
+      bedDaysCount: edited.bedDaysCount,
+      roomCategory: edited.roomCategory,
+      dietType: edited.dietType,
+      specialNeeds: latest.specialNeeds,
+      lfkGroup: latest.lfkGroup,
+      culturalParticipation: edited.culturalParticipation,
+      voucherType: edited.voucherType,
+      extraServices: edited.extraServices,
+      companionData: edited.companionData,
+      treatmentEfficiency: latest.treatmentEfficiency,
+      treatmentDurationCategory: latest.treatmentDurationCategory,
+      benefitCategory: edited.benefitCategory,
+      egiszId: edited.egiszId,
+      fssReferralId: edited.fssReferralId,
+      isEgiszActivated: latest.isEgiszActivated,
+      diagnosis: latest.diagnosis,
+      contraindications: latest.contraindications,
+      treatmentGoals: latest.treatmentGoals,
+      dynamics: latest.dynamics,
+      finalRecommendations: latest.finalRecommendations,
+    );
+  }
+
+  String _normalizeAdmissionStatus(dynamic status) {
+    switch (status) {
+      case 'planned':
+      case 'wait_checkin':
+      case 'waiting':
+        return 'planned';
+      case 'active':
+      case 'isolated':
+        return 'active';
+      case 'discharged':
+      case 'completed':
+      case 'early_checkout':
+        return 'discharged';
+      case 'cancelled':
+      case 'canceled':
+        return 'cancelled';
+      default:
+        return 'planned';
+    }
+  }
+
+  String _normalizeAppointmentStatus(dynamic status) {
+    switch (status) {
+      case 'pending':
+      case 'waiting':
+        return 'pending';
+      case 'confirmed':
+        return 'confirmed';
+      case 'completed':
+        return 'completed';
+      case 'cancelled':
+      case 'canceled':
+        return 'cancelled';
+      case 'no_show':
+      case 'missed':
+        return 'no_show';
+      default:
+        return 'pending';
+    }
+  }
+
+  Future<void> deletePatient(int id) async => await _safeRequest(
+    () => http.delete(Uri.parse('$baseUrl/patients/$id'), headers: headers),
+    'deletePatient',
+  );
 
   // --- EMK ---
   Future<EMK?> getEMK(int patientId) async {
-    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/emk/$patientId'), headers: headers), 'getEMK');
+    final res = await _safeRequest(
+      () => http.get(Uri.parse('$baseUrl/emk/$patientId'), headers: headers),
+      'getEMK',
+    );
     if (res == null || res.statusCode != 200) return null;
     try {
       return EMK.fromMap(jsonDecode(res.body));
@@ -235,29 +384,46 @@ class DatabaseService with ApiClient {
     final existing = await getEMK(emk.patientId);
     final url = Uri.parse('$baseUrl/emk');
     final body = jsonEncode(emk.toMap());
-    
+
     if (existing == null) {
-      await _safeRequest(() => http.post(url, body: body, headers: headers), 'createEMK');
+      await _safeRequest(
+        () => http.post(url, body: body, headers: headers),
+        'createEMK',
+      );
     } else {
-      await _safeRequest(() => http.put(url, body: body, headers: headers), 'updateEMK');
+      await _safeRequest(
+        () => http.put(url, body: body, headers: headers),
+        'updateEMK',
+      );
     }
   }
 
   // --- MEASUREMENTS ---
   Future<List<Measurement>> getMeasurements(int id) async {
-    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/measurements/$id'), headers: headers), 'getMeasurements');
+    final res = await _safeRequest(
+      () => http.get(Uri.parse('$baseUrl/measurements/$id'), headers: headers),
+      'getMeasurements',
+    );
     if (res == null || res.statusCode != 200) return [];
     try {
       final List d = jsonDecode(res.body);
-      return d.map((i) => Measurement(
-        id: i['id'],
-        patientId: i['patient_id'] ?? i['patientId'],
-        pressureSystolic: (i['pressure_systolic'] ?? i['pressureSystolic'] as num).toDouble(),
-        pressureDiastolic: (i['pressure_diastolic'] ?? i['pressureDiastolic'] as num).toDouble(),
-        pulse: i['pulse'] ?? 0,
-        painLevel: i['pain_level'] ?? i['painLevel'] ?? 0,
-        timestamp: i['timestamp'] ?? ''
-      )).toList();
+      return d
+          .map(
+            (i) => Measurement(
+              id: i['id'],
+              patientId: i['patient_id'] ?? i['patientId'],
+              pressureSystolic:
+                  (i['pressure_systolic'] ?? i['pressureSystolic'] as num)
+                      .toDouble(),
+              pressureDiastolic:
+                  (i['pressure_diastolic'] ?? i['pressureDiastolic'] as num)
+                      .toDouble(),
+              pulse: i['pulse'] ?? 0,
+              painLevel: i['pain_level'] ?? i['painLevel'] ?? 0,
+              timestamp: i['timestamp'] ?? '',
+            ),
+          )
+          .toList();
     } catch (e) {
       debugPrint('getMeasurements parse error: $e');
     }
@@ -269,12 +435,12 @@ class DatabaseService with ApiClient {
       () => http.post(
         Uri.parse('$baseUrl/measurements'),
         body: jsonEncode({
-          'patient_id': m.patientId, 
+          'patient_id': m.patientId,
           'pressure_systolic': m.pressureSystolic,
-          'pressure_diastolic': m.pressureDiastolic, 
+          'pressure_diastolic': m.pressureDiastolic,
           'pulse': m.pulse,
-          'pain_level': m.painLevel, 
-          'timestamp': m.timestamp
+          'pain_level': m.painLevel,
+          'timestamp': m.timestamp,
         }),
         headers: headers,
       ),
@@ -284,18 +450,25 @@ class DatabaseService with ApiClient {
 
   // --- MOOD & NOTES ---
   Future<List<MoodEntry>> getMoodEntries(int id) async {
-    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/mood/$id'), headers: headers), 'getMoodEntries');
+    final res = await _safeRequest(
+      () => http.get(Uri.parse('$baseUrl/mood/$id'), headers: headers),
+      'getMoodEntries',
+    );
     if (res == null || res.statusCode != 200) return [];
     try {
       final List d = jsonDecode(res.body);
-      return d.map((i) => MoodEntry(
-        id: i['id'], 
-        patientId: i['patient_id'] ?? i['patientId'] ?? 0, 
-        score: i['score'] ?? 0,
-        comment: i['comment'] ?? '', 
-        timestamp: i['timestamp'] ?? '', 
-        sentiment: i['sentiment']
-      )).toList();
+      return d
+          .map(
+            (i) => MoodEntry(
+              id: i['id'],
+              patientId: i['patient_id'] ?? i['patientId'] ?? 0,
+              score: i['score'] ?? 0,
+              comment: i['comment'] ?? '',
+              timestamp: i['timestamp'] ?? '',
+              sentiment: i['sentiment'],
+            ),
+          )
+          .toList();
     } catch (e) {
       debugPrint('getMoodEntries error: $e');
     }
@@ -307,11 +480,11 @@ class DatabaseService with ApiClient {
       () => http.post(
         Uri.parse('$baseUrl/mood'),
         body: jsonEncode({
-          'patient_id': m.patientId, 
-          'score': m.score, 
+          'patient_id': m.patientId,
+          'score': m.score,
           'comment': m.comment,
-          'timestamp': m.timestamp, 
-          'sentiment': m.sentiment
+          'timestamp': m.timestamp,
+          'sentiment': m.sentiment,
         }),
         headers: headers,
       ),
@@ -319,11 +492,16 @@ class DatabaseService with ApiClient {
     );
   }
 
-  Future<void> deleteMoodEntry(int id) async => 
-      await _safeRequest(() => http.delete(Uri.parse('$baseUrl/mood/$id'), headers: headers), 'deleteMoodEntry');
+  Future<void> deleteMoodEntry(int id) async => await _safeRequest(
+    () => http.delete(Uri.parse('$baseUrl/mood/$id'), headers: headers),
+    'deleteMoodEntry',
+  );
 
   Future<List<Map<String, dynamic>>> getNotes(int id) async {
-    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/notes/$id'), headers: headers), 'getNotes');
+    final res = await _safeRequest(
+      () => http.get(Uri.parse('$baseUrl/notes/$id'), headers: headers),
+      'getNotes',
+    );
     if (res == null || res.statusCode != 200) return [];
     try {
       return List<Map<String, dynamic>>.from(jsonDecode(res.body));
@@ -338,10 +516,13 @@ class DatabaseService with ApiClient {
       () => http.post(
         Uri.parse('$baseUrl/notes'),
         body: jsonEncode({
-          'patient_id': patientId, 
-          'author': author, 
+          'patient_id': patientId,
+          'author': author,
           'content': content,
-          'timestamp': DateTime.now().toUtc().add(const Duration(hours: 3)).toIso8601String()
+          'timestamp': DateTime.now()
+              .toUtc()
+              .add(const Duration(hours: 3))
+              .toIso8601String(),
         }),
         headers: headers,
       ),
@@ -351,20 +532,27 @@ class DatabaseService with ApiClient {
 
   // --- APPOINTMENTS & SCHEDULE ---
   Future<List<Appointment>> getAppointments(int id) async {
-    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/appointments/$id'), headers: headers), 'getAppointments');
+    final res = await _safeRequest(
+      () => http.get(Uri.parse('$baseUrl/appointments/$id'), headers: headers),
+      'getAppointments',
+    );
     if (res == null || res.statusCode != 200) return [];
     try {
       final List d = jsonDecode(res.body);
-      return d.map((i) => Appointment(
-        id: i['id'], 
-        patientId: i['patient_id'] ?? i['patientId'] ?? 0, 
-        type: i['type'] ?? '',
-        title: i['title'] ?? '', 
-        time: i['time'] ?? '', 
-        room: i['room'] ?? '',
-        doctor: i['doctor'] ?? '', 
-        status: i['status'] ?? 'pending'
-      )).toList();
+      return d
+          .map(
+            (i) => Appointment(
+              id: i['id'],
+              patientId: i['patient_id'] ?? i['patientId'] ?? 0,
+              type: i['type'] ?? '',
+              title: i['title'] ?? '',
+              time: i['time'] ?? '',
+              room: i['room'] ?? '',
+              doctor: i['doctor'] ?? '',
+              status: i['status'] ?? 'pending',
+            ),
+          )
+          .toList();
     } catch (e) {
       debugPrint('getAppointments error: $e');
     }
@@ -376,13 +564,13 @@ class DatabaseService with ApiClient {
       () => http.post(
         Uri.parse('$baseUrl/appointments'),
         body: jsonEncode({
-          'patient_id': a.patientId, 
-          'type': a.type, 
+          'patient_id': a.patientId,
+          'type': a.type,
           'title': a.title,
-          'time': a.time, 
-          'room': a.room, 
-          'doctor': a.doctor, 
-          'status': a.status
+          'time': a.time,
+          'room': a.room,
+          'doctor': a.doctor,
+          'status': a.status,
         }),
         headers: headers,
       ),
@@ -394,18 +582,31 @@ class DatabaseService with ApiClient {
     await _safeRequest(
       () => http.put(
         Uri.parse('$baseUrl/appointments/status'),
-        body: jsonEncode({'id': id, 'status': status}),
+        body: jsonEncode({
+          'id': id,
+          'status': _normalizeAppointmentStatus(status),
+        }),
         headers: headers,
       ),
       'updateAppointmentStatus',
     );
   }
 
-  Future<void> deleteAppointment(int id) async => 
-      await _safeRequest(() => http.delete(Uri.parse('$baseUrl/appointments/$id'), headers: headers), 'deleteAppointment');
+  Future<void> deleteAppointment(int id) async => await _safeRequest(
+    () => http.delete(Uri.parse('$baseUrl/appointments/$id'), headers: headers),
+    'deleteAppointment',
+  );
 
-  Future<List<Map<String, dynamic>>> getDoctorSchedule(String doctorName) async {
-    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/schedule/${Uri.encodeComponent(doctorName)}'), headers: headers), 'getDoctorSchedule');
+  Future<List<Map<String, dynamic>>> getDoctorSchedule(
+    String doctorName,
+  ) async {
+    final res = await _safeRequest(
+      () => http.get(
+        Uri.parse('$baseUrl/schedule/${Uri.encodeComponent(doctorName)}'),
+        headers: headers,
+      ),
+      'getDoctorSchedule',
+    );
     if (res == null || res.statusCode != 200) return [];
     try {
       return List<Map<String, dynamic>>.from(jsonDecode(res.body));
@@ -417,17 +618,25 @@ class DatabaseService with ApiClient {
 
   // --- QUESTIONNAIRES & HOSPITALIZATIONS ---
   Future<List<QuestionnaireResult>> getQuestionnaireResults(int id) async {
-    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/questionnaires/$id'), headers: headers), 'getQuestionnaires');
+    final res = await _safeRequest(
+      () =>
+          http.get(Uri.parse('$baseUrl/questionnaires/$id'), headers: headers),
+      'getQuestionnaires',
+    );
     if (res == null || res.statusCode != 200) return [];
     try {
       final List d = jsonDecode(res.body);
-      return d.map((i) => QuestionnaireResult(
-        id: i['id'], 
-        patientId: i['patient_id'] ?? i['patientId'] ?? 0, 
-        title: i['title'] ?? '',
-        totalScore: i['total_score'] ?? i['totalScore'] ?? 0, 
-        date: i['date'] ?? ''
-      )).toList();
+      return d
+          .map(
+            (i) => QuestionnaireResult(
+              id: i['id'],
+              patientId: i['patient_id'] ?? i['patientId'] ?? 0,
+              title: i['title'] ?? '',
+              totalScore: i['total_score'] ?? i['totalScore'] ?? 0,
+              date: i['date'] ?? '',
+            ),
+          )
+          .toList();
     } catch (e) {
       debugPrint('getQuestionnaireResults error: $e');
     }
@@ -439,10 +648,10 @@ class DatabaseService with ApiClient {
       () => http.post(
         Uri.parse('$baseUrl/questionnaires'),
         body: jsonEncode({
-          'patient_id': q.patientId, 
+          'patient_id': q.patientId,
           'title': q.title,
-          'total_score': q.totalScore, 
-          'date': q.date
+          'total_score': q.totalScore,
+          'date': q.date,
         }),
         headers: headers,
       ),
@@ -450,11 +659,20 @@ class DatabaseService with ApiClient {
     );
   }
 
-  Future<void> deleteQuestionnaireResult(int id) async => 
-      await _safeRequest(() => http.delete(Uri.parse('$baseUrl/questionnaires/$id'), headers: headers), 'deleteQuestionnaire');
+  Future<void> deleteQuestionnaireResult(int id) async => await _safeRequest(
+    () =>
+        http.delete(Uri.parse('$baseUrl/questionnaires/$id'), headers: headers),
+    'deleteQuestionnaire',
+  );
 
   Future<List<Map<String, dynamic>>> getHospitalizations(int id) async {
-    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/hospitalizations/$id'), headers: headers), 'getHospitalizations');
+    final res = await _safeRequest(
+      () => http.get(
+        Uri.parse('$baseUrl/hospitalizations/$id'),
+        headers: headers,
+      ),
+      'getHospitalizations',
+    );
     if (res == null || res.statusCode != 200) return [];
     try {
       return List<Map<String, dynamic>>.from(jsonDecode(res.body));
@@ -464,16 +682,22 @@ class DatabaseService with ApiClient {
     return [];
   }
 
-  Future<void> insertHospitalization(int pId, String a, String d, String r, String dep) async {
+  Future<void> insertHospitalization(
+    int pId,
+    String a,
+    String d,
+    String r,
+    String dep,
+  ) async {
     await _safeRequest(
       () => http.post(
         Uri.parse('$baseUrl/hospitalizations'),
         body: jsonEncode({
-          'patient_id': pId, 
-          'admission_date': a, 
+          'patient_id': pId,
+          'admission_date': a,
           'discharge_date': d,
-          'reason': r, 
-          'department': dep
+          'reason': r,
+          'department': dep,
         }),
         headers: headers,
       ),
@@ -487,8 +711,8 @@ class DatabaseService with ApiClient {
       () => http.post(
         Uri.parse('$baseUrl/reminders'),
         body: jsonEncode({
-          'patient_id': patientId, 
-          'doctor_id': doctorId, 
+          'patient_id': patientId,
+          'doctor_id': doctorId,
           'message': message,
           'timestamp': DateTime.now().toIso8601String(),
         }),
@@ -499,7 +723,13 @@ class DatabaseService with ApiClient {
   }
 
   Future<List<Map<String, dynamic>>> getUnreadReminders(int patientId) async {
-    final res = await _safeRequest(() => http.get(Uri.parse('$baseUrl/reminders/unread/$patientId'), headers: headers), 'getReminders');
+    final res = await _safeRequest(
+      () => http.get(
+        Uri.parse('$baseUrl/reminders/unread/$patientId'),
+        headers: headers,
+      ),
+      'getReminders',
+    );
     if (res == null || res.statusCode != 200) return [];
     try {
       return List<Map<String, dynamic>>.from(jsonDecode(res.body));
@@ -509,6 +739,8 @@ class DatabaseService with ApiClient {
     return [];
   }
 
-  Future<void> markReminderAsRead(int id) async => 
-      await _safeRequest(() => http.put(Uri.parse('$baseUrl/reminders/read/$id'), headers: headers), 'markReminderRead');
+  Future<void> markReminderAsRead(int id) async => await _safeRequest(
+    () => http.put(Uri.parse('$baseUrl/reminders/read/$id'), headers: headers),
+    'markReminderRead',
+  );
 }

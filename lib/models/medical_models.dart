@@ -4,9 +4,19 @@ class Diagnosis {
   final String description;
   final String date;
 
-  Diagnosis({this.id, required this.patientId, required this.description, required this.date});
+  Diagnosis({
+    this.id,
+    required this.patientId,
+    required this.description,
+    required this.date,
+  });
 
-  Map<String, dynamic> toMap() => {'id': id, 'patientId': patientId, 'description': description, 'date': date};
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'patientId': patientId,
+    'description': description,
+    'date': date,
+  };
 
   factory Diagnosis.fromMap(Map<String, dynamic> map) => Diagnosis(
     id: map['id'],
@@ -24,7 +34,7 @@ class Appointment {
   final String time;
   final String room;
   final String doctor;
-  final String status; // 'pending', 'completed', 'missed', 'waiting'
+  final String status; // pending, confirmed, completed, cancelled, no_show
 
   Appointment({
     this.id,
@@ -69,7 +79,15 @@ class Measurement {
   final int painLevel; // 0-10
   final String timestamp;
 
-  Measurement({this.id, required this.patientId, required this.pressureSystolic, required this.pressureDiastolic, required this.pulse, required this.painLevel, required this.timestamp});
+  Measurement({
+    this.id,
+    required this.patientId,
+    required this.pressureSystolic,
+    required this.pressureDiastolic,
+    required this.pulse,
+    required this.painLevel,
+    required this.timestamp,
+  });
 
   Map<String, dynamic> toMap() => {
     'id': id,
@@ -100,7 +118,14 @@ class MoodEntry {
   final String timestamp;
   final String? sentiment; // AI analyzed
 
-  MoodEntry({this.id, required this.patientId, required this.score, required this.comment, required this.timestamp, this.sentiment});
+  MoodEntry({
+    this.id,
+    required this.patientId,
+    required this.score,
+    required this.comment,
+    required this.timestamp,
+    this.sentiment,
+  });
 
   Map<String, dynamic> toMap() => {
     'id': id,
@@ -128,15 +153,28 @@ class QuestionnaireResult {
   final int totalScore;
   final String date;
 
-  QuestionnaireResult({this.id, required this.patientId, required this.title, required this.totalScore, required this.date});
+  QuestionnaireResult({
+    this.id,
+    required this.patientId,
+    required this.title,
+    required this.totalScore,
+    required this.date,
+  });
 
-  Map<String, dynamic> toMap() => {'id': id, 'patientId': patientId, 'title': title, 'totalScore': totalScore, 'date': date};
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'patientId': patientId,
+    'title': title,
+    'totalScore': totalScore,
+    'date': date,
+  };
 
-  factory QuestionnaireResult.fromMap(Map<String, dynamic> map) => QuestionnaireResult(
-    id: map['id'],
-    patientId: map['patientId'],
-    title: map['title'],
-    totalScore: map['totalScore'],
-    date: map['date'],
-  );
+  factory QuestionnaireResult.fromMap(Map<String, dynamic> map) =>
+      QuestionnaireResult(
+        id: map['id'],
+        patientId: map['patientId'],
+        title: map['title'],
+        totalScore: map['totalScore'],
+        date: map['date'],
+      );
 }

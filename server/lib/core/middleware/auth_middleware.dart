@@ -37,10 +37,8 @@ Middleware authMiddleware() {
       } on JWTException catch (e) {
         print('Auth Error: ${e.message}');
         return ResponseHelper.error('Invalid token: ${e.message}', statusCode: 401);
-      } catch (e) {
-        print('Auth Error: Unknown error');
-        return ResponseHelper.error('Unauthorized', statusCode: 401);
       }
+      // Removed the generic catch(e) that was masking errors as 401
     };
   };
 }

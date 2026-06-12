@@ -19,7 +19,8 @@ class DoctorMainScreen extends StatefulWidget {
 class _DoctorMainScreenState extends State<DoctorMainScreen> {
   int _selectedIndex = 0;
   late List<Widget> _pages;
-  final GlobalKey<DoctorScheduleTabState> _scheduleKey = GlobalKey<DoctorScheduleTabState>();
+  final GlobalKey<DoctorScheduleTabState> _scheduleKey =
+      GlobalKey<DoctorScheduleTabState>();
 
   @override
   void initState() {
@@ -58,13 +59,35 @@ class _DoctorMainScreenState extends State<DoctorMainScreen> {
               extended: MediaQuery.of(context).size.width > 1200,
               selectedIndex: _selectedIndex,
               onDestinationSelected: _onTabSelected,
-              labelType: MediaQuery.of(context).size.width > 1200 ? NavigationRailLabelType.none : NavigationRailLabelType.all,
+              labelType: MediaQuery.of(context).size.width > 1200
+                  ? NavigationRailLabelType.none
+                  : NavigationRailLabelType.all,
               destinations: const [
-                NavigationRailDestination(icon: Icon(Icons.people_outline_rounded), selectedIcon: Icon(Icons.people_rounded), label: Text('Пациенты')),
-                NavigationRailDestination(icon: Icon(Icons.calendar_today_outlined), selectedIcon: Icon(Icons.calendar_today_rounded), label: Text('График')),
-                NavigationRailDestination(icon: Icon(Icons.psychology_outlined), selectedIcon: Icon(Icons.psychology_rounded), label: Text('ИИ Помощник')),
-                NavigationRailDestination(icon: Icon(Icons.medical_services_outlined), selectedIcon: Icon(Icons.medical_services_rounded), label: Text('Профиль')),
-                NavigationRailDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded), label: Text('Настройки')),
+                NavigationRailDestination(
+                  icon: Icon(Icons.people_outline_rounded),
+                  selectedIcon: Icon(Icons.people_rounded),
+                  label: Text('Пациенты'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.calendar_today_outlined),
+                  selectedIcon: Icon(Icons.calendar_today_rounded),
+                  label: Text('График'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.psychology_outlined),
+                  selectedIcon: Icon(Icons.psychology_rounded),
+                  label: Text('ИИ Помощник'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.medical_services_outlined),
+                  selectedIcon: Icon(Icons.medical_services_rounded),
+                  label: Text('Профиль'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.settings_outlined),
+                  selectedIcon: Icon(Icons.settings_rounded),
+                  label: Text('Настройки'),
+                ),
               ],
             ),
             const VerticalDivider(thickness: 1, width: 1),
@@ -72,10 +95,7 @@ class _DoctorMainScreenState extends State<DoctorMainScreen> {
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1000),
-                  child: IndexedStack(
-                    index: _selectedIndex,
-                    children: _pages,
-                  ),
+                  child: IndexedStack(index: _selectedIndex, children: _pages),
                 ),
               ),
             ),
@@ -85,20 +105,39 @@ class _DoctorMainScreenState extends State<DoctorMainScreen> {
     }
 
     return Scaffold(
-      appBar: _selectedIndex == 0 ? AppBar(title: const Text('Список пациентов')) : null,
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
-      ),
+      appBar: _selectedIndex == 0
+          ? AppBar(title: const Text('Список пациентов'))
+          : null,
+      body: IndexedStack(index: _selectedIndex, children: _pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _onTabSelected,
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.people_outline_rounded), selectedIcon: Icon(Icons.people_rounded), label: 'Пациенты'),
-          NavigationDestination(icon: Icon(Icons.calendar_today_outlined), selectedIcon: Icon(Icons.calendar_today_rounded), label: 'График'),
-          NavigationDestination(icon: Icon(Icons.psychology_outlined), selectedIcon: Icon(Icons.psychology_rounded), label: 'ИИ Помощник'),
-          NavigationDestination(icon: Icon(Icons.medical_services_outlined), selectedIcon: Icon(Icons.medical_services_rounded), label: 'Профиль'),
-          NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded), label: 'Настройки'),
+          NavigationDestination(
+            icon: Icon(Icons.people_outline_rounded),
+            selectedIcon: Icon(Icons.people_rounded),
+            label: 'Пациенты',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.calendar_today_outlined),
+            selectedIcon: Icon(Icons.calendar_today_rounded),
+            label: 'График',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.psychology_outlined),
+            selectedIcon: Icon(Icons.psychology_rounded),
+            label: 'ИИ Помощник',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.medical_services_outlined),
+            selectedIcon: Icon(Icons.medical_services_rounded),
+            label: 'Профиль',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings_rounded),
+            label: 'Настройки',
+          ),
         ],
       ),
     );
@@ -151,9 +190,9 @@ class DoctorScheduleTabState extends State<DoctorScheduleTab> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки графика: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка загрузки графика: $e')));
       }
     }
   }
@@ -185,7 +224,7 @@ class DoctorScheduleTabState extends State<DoctorScheduleTab> {
           ),
         ],
       ),
-      body: _isLoading 
+      body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: loadSchedule,
@@ -197,7 +236,11 @@ class DoctorScheduleTabState extends State<DoctorScheduleTab> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.event_note_rounded, size: 64, color: colorScheme.outline),
+                              Icon(
+                                Icons.event_note_rounded,
+                                size: 64,
+                                color: colorScheme.outline,
+                              ),
                               const SizedBox(height: 16),
                               const Text('Назначенных мероприятий пока нет'),
                             ],
@@ -211,17 +254,21 @@ class DoctorScheduleTabState extends State<DoctorScheduleTab> {
                       itemBuilder: (context, index) {
                         final item = _schedule[index];
                         final dateTime = DateTime.parse(item['time'] as String);
-                        final formattedDate = "${dateTime.day.toString().padLeft(2, '0')}.${dateTime.month.toString().padLeft(2, '0')}.${dateTime.year}";
-                        final formattedTime = "${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}";
+                        final formattedDate =
+                            "${dateTime.day.toString().padLeft(2, '0')}.${dateTime.month.toString().padLeft(2, '0')}.${dateTime.year}";
+                        final formattedTime =
+                            "${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}";
                         final status = item['status'] as String? ?? 'pending';
-                        
+
                         return Card(
                           margin: const EdgeInsets.only(bottom: 12),
                           elevation: 0,
                           clipBehavior: Clip.antiAlias,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
-                            side: BorderSide(color: colorScheme.outlineVariant.withAlpha(128)),
+                            side: BorderSide(
+                              color: colorScheme.outlineVariant.withAlpha(128),
+                            ),
                           ),
                           child: Column(
                             children: [
@@ -229,14 +276,21 @@ class DoctorScheduleTabState extends State<DoctorScheduleTab> {
                                 leading: Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: colorScheme.primaryContainer.withAlpha(102),
+                                    color: colorScheme.primaryContainer
+                                        .withAlpha(102),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: Icon(Icons.event_rounded, color: colorScheme.primary),
+                                  child: Icon(
+                                    Icons.event_rounded,
+                                    color: colorScheme.primary,
+                                  ),
                                 ),
                                 title: Text(
-                                  item['title'] as String, 
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)
+                                  item['title'] as String,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
                                 ),
                                 subtitle: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,11 +298,15 @@ class DoctorScheduleTabState extends State<DoctorScheduleTab> {
                                     const SizedBox(height: 4),
                                     Text(
                                       'Пациент: ${_formatNameShort(item['patient_name'] as String)}',
-                                      style: const TextStyle(fontWeight: FontWeight.w500),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
                                     Text(
                                       'Кабинет: ${item['room']} • ${item['type']}',
-                                      style: TextStyle(color: colorScheme.onSurfaceVariant),
+                                      style: TextStyle(
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -257,54 +315,82 @@ class DoctorScheduleTabState extends State<DoctorScheduleTab> {
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
-                                      formattedDate, 
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)
+                                      formattedDate,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
                                     ),
                                     const SizedBox(height: 4),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: colorScheme.secondaryContainer,
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Text(
-                                        formattedTime, 
+                                        formattedTime,
                                         style: TextStyle(
-                                          color: colorScheme.onSecondaryContainer, 
+                                          color:
+                                              colorScheme.onSecondaryContainer,
                                           fontWeight: FontWeight.bold,
                                           fontSize: 12,
-                                        )
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                              const Divider(height: 1, indent: 16, endIndent: 16),
+                              const Divider(
+                                height: 1,
+                                indent: 16,
+                                endIndent: 16,
+                              ),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceEvenly,
                                   children: [
                                     _StatusButton(
                                       icon: Icons.check_circle_rounded,
                                       color: Colors.green,
                                       label: 'Проведено',
                                       isActive: status == 'completed',
-                                      onTap: () => _updateStatus(item['id'] as int, 'completed'),
+                                      onTap: () => _updateStatus(
+                                        item['id'] as int,
+                                        'completed',
+                                      ),
                                     ),
                                     _StatusButton(
                                       icon: Icons.cancel_rounded,
                                       color: Colors.red,
                                       label: 'Не проведено',
-                                      isActive: status == 'missed',
-                                      onTap: () => _updateStatus(item['id'] as int, 'missed'),
+                                      isActive:
+                                          status == 'no_show' ||
+                                          status == 'missed',
+                                      onTap: () => _updateStatus(
+                                        item['id'] as int,
+                                        'no_show',
+                                      ),
                                     ),
                                     _StatusButton(
                                       icon: Icons.access_time_filled_rounded,
                                       color: Colors.orange,
                                       label: 'Ожидание',
-                                      isActive: status == 'waiting',
-                                      onTap: () => _updateStatus(item['id'] as int, 'waiting'),
+                                      isActive:
+                                          status == 'pending' ||
+                                          status == 'waiting',
+                                      onTap: () => _updateStatus(
+                                        item['id'] as int,
+                                        'pending',
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -338,14 +424,18 @@ class _StatusButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextButton.icon(
       onPressed: onTap,
-      icon: Icon(icon, color: isActive ? color : color.withAlpha(128), size: 18),
+      icon: Icon(
+        icon,
+        color: isActive ? color : color.withAlpha(128),
+        size: 18,
+      ),
       label: Text(
-        label, 
+        label,
         style: TextStyle(
           color: isActive ? color : color.withAlpha(128),
           fontSize: 11,
           fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-        )
+        ),
       ),
       style: TextButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -362,7 +452,11 @@ class _DoctorAIChatTab extends StatefulWidget {
 
 class _DoctorAIChatTabState extends State<_DoctorAIChatTab> {
   final List<Map<String, String>> _messages = [
-    {'role': 'ai', 'content': 'Здравствуйте, коллега! Чем я могу помочь вам в анализе данных пациентов?'}
+    {
+      'role': 'ai',
+      'content':
+          'Здравствуйте, коллега! Чем я могу помочь вам в анализе данных пациентов?',
+    },
   ];
   final TextEditingController _controller = TextEditingController();
   bool _isLoading = false;
@@ -377,7 +471,11 @@ class _DoctorAIChatTabState extends State<_DoctorAIChatTab> {
     _controller.clear();
 
     try {
-      final aiResponse = await AIService.chatWithAI(userMessage, 0, isDoctor: true);
+      final aiResponse = await AIService.chatWithAI(
+        userMessage,
+        0,
+        isDoctor: true,
+      );
       if (mounted) {
         setState(() {
           _messages.add({'role': 'ai', 'content': aiResponse});
@@ -387,7 +485,10 @@ class _DoctorAIChatTabState extends State<_DoctorAIChatTab> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _messages.add({'role': 'ai', 'content': 'Ошибка связи с ИИ-помощником.'});
+          _messages.add({
+            'role': 'ai',
+            'content': 'Ошибка связи с ИИ-помощником.',
+          });
           _isLoading = false;
         });
       }
@@ -399,10 +500,7 @@ class _DoctorAIChatTabState extends State<_DoctorAIChatTab> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('ИИ Помощник врача'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('ИИ Помощник врача'), centerTitle: true),
       body: Column(
         children: [
           Expanded(
@@ -410,16 +508,29 @@ class _DoctorAIChatTabState extends State<_DoctorAIChatTab> {
               padding: const EdgeInsets.all(16),
               itemCount: _messages.length + (_isLoading ? 1 : 0),
               itemBuilder: (context, index) {
-                if (index == _messages.length) return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
+                if (index == _messages.length)
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  );
                 final m = _messages[index];
                 final isAi = m['role'] == 'ai';
                 return Align(
-                  alignment: isAi ? Alignment.centerLeft : Alignment.centerRight,
+                  alignment: isAi
+                      ? Alignment.centerLeft
+                      : Alignment.centerRight,
                   child: Container(
                     margin: const EdgeInsets.symmetric(vertical: 6),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
-                      color: isAi ? colorScheme.secondaryContainer : colorScheme.primary,
+                      color: isAi
+                          ? colorScheme.secondaryContainer
+                          : colorScheme.primary,
                       borderRadius: BorderRadius.only(
                         topLeft: const Radius.circular(16),
                         topRight: const Radius.circular(16),
@@ -428,9 +539,19 @@ class _DoctorAIChatTabState extends State<_DoctorAIChatTab> {
                       ),
                     ),
                     constraints: BoxConstraints(
-                      maxWidth: min(MediaQuery.of(context).size.width * 0.75, 650)
+                      maxWidth: min(
+                        MediaQuery.of(context).size.width * 0.75,
+                        650,
+                      ),
                     ),
-                    child: Text(m['content']!, style: TextStyle(color: isAi ? colorScheme.onSecondaryContainer : colorScheme.onPrimary)),
+                    child: Text(
+                      m['content']!,
+                      style: TextStyle(
+                        color: isAi
+                            ? colorScheme.onSecondaryContainer
+                            : colorScheme.onPrimary,
+                      ),
+                    ),
                   ),
                 );
               },
@@ -442,22 +563,32 @@ class _DoctorAIChatTabState extends State<_DoctorAIChatTab> {
               children: [
                 Expanded(
                   child: TextField(
-                    controller: _controller, 
+                    controller: _controller,
                     decoration: InputDecoration(
                       hintText: 'Введите запрос...',
                       filled: true,
-                      fillColor: colorScheme.surfaceContainerHighest.withAlpha(128),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+                      fillColor: colorScheme.surfaceContainerHighest.withAlpha(
+                        128,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                      ),
                     ),
                     onSubmitted: (_) => _sendMessage(),
-                  )
+                  ),
                 ),
                 const SizedBox(width: 8),
-                IconButton.filled(onPressed: _sendMessage, icon: const Icon(Icons.send_rounded)),
+                IconButton.filled(
+                  onPressed: _sendMessage,
+                  icon: const Icon(Icons.send_rounded),
+                ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
@@ -478,9 +609,13 @@ class _DoctorProfileTab extends StatelessWidget {
         children: [
           Center(
             child: CircleAvatar(
-              radius: 60, 
+              radius: 60,
               backgroundColor: colorScheme.primaryContainer,
-              child: Icon(Icons.medical_services_rounded, size: 60, color: colorScheme.onPrimaryContainer)
+              child: Icon(
+                Icons.medical_services_rounded,
+                size: 60,
+                color: colorScheme.onPrimaryContainer,
+              ),
             ),
           ),
           const SizedBox(height: 32),
@@ -488,17 +623,39 @@ class _DoctorProfileTab extends StatelessWidget {
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(24),
-              side: BorderSide(color: colorScheme.outlineVariant.withAlpha(128)),
+              side: BorderSide(
+                color: colorScheme.outlineVariant.withAlpha(128),
+              ),
             ),
             child: Column(
               children: [
-                _buildInfoTile(context, 'ФИО', doctor.name, Icons.badge_outlined),
+                _buildInfoTile(
+                  context,
+                  'ФИО',
+                  doctor.name,
+                  Icons.badge_outlined,
+                ),
                 _buildDivider(colorScheme),
-                _buildInfoTile(context, 'Специализация', doctor.specialization, Icons.assignment_ind_outlined),
+                _buildInfoTile(
+                  context,
+                  'Специализация',
+                  doctor.specialization,
+                  Icons.assignment_ind_outlined,
+                ),
                 _buildDivider(colorScheme),
-                _buildInfoTile(context, 'Телефон', doctor.phone ?? 'Не указан', Icons.phone_outlined),
+                _buildInfoTile(
+                  context,
+                  'Телефон',
+                  doctor.phone ?? 'Не указан',
+                  Icons.phone_outlined,
+                ),
                 _buildDivider(colorScheme),
-                _buildInfoTile(context, 'Кабинет', doctor.cabinet ?? 'Не указан', Icons.meeting_room_outlined),
+                _buildInfoTile(
+                  context,
+                  'Кабинет',
+                  doctor.cabinet ?? 'Не указан',
+                  Icons.meeting_room_outlined,
+                ),
               ],
             ),
           ),
@@ -507,14 +664,30 @@ class _DoctorProfileTab extends StatelessWidget {
     );
   }
 
-  Widget _buildDivider(ColorScheme colorScheme) => Divider(indent: 56, endIndent: 16, height: 1, color: colorScheme.outlineVariant.withAlpha(76));
+  Widget _buildDivider(ColorScheme colorScheme) => Divider(
+    indent: 56,
+    endIndent: 16,
+    height: 1,
+    color: colorScheme.outlineVariant.withAlpha(76),
+  );
 
-  Widget _buildInfoTile(BuildContext context, String label, String value, IconData icon) {
+  Widget _buildInfoTile(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+  ) {
     final colorScheme = Theme.of(context).colorScheme;
     return ListTile(
       leading: Icon(icon, color: colorScheme.primary),
-      title: Text(label, style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant)),
-      subtitle: Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+      title: Text(
+        label,
+        style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+      ),
+      subtitle: Text(
+        value,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      ),
     );
   }
 }
@@ -534,12 +707,18 @@ class _DoctorSettingsTab extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 32),
               decoration: BoxDecoration(
                 color: colorScheme.primaryContainer,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
               ),
               child: Center(
                 child: Column(
                   children: [
-                    Icon(Icons.medical_services_rounded, size: 64, color: colorScheme.primary),
+                    Icon(
+                      Icons.medical_services_rounded,
+                      size: 64,
+                      color: colorScheme.primary,
+                    ),
                     const SizedBox(height: 16),
                     Text(
                       'Система РеСтарт',
@@ -551,7 +730,11 @@ class _DoctorSettingsTab extends StatelessWidget {
                     ),
                     Text(
                       'Версия 1.0.0',
-                      style: TextStyle(color: colorScheme.onPrimaryContainer.withValues(alpha: 0.7)),
+                      style: TextStyle(
+                        color: colorScheme.onPrimaryContainer.withValues(
+                          alpha: 0.7,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -597,17 +780,25 @@ class _DoctorSettingsTab extends StatelessWidget {
         children: [
           _buildSettingsHeader('Внешний вид'),
           SwitchListTile(
-            secondary: Icon(Icons.dark_mode_outlined, color: colorScheme.primary),
+            secondary: Icon(
+              Icons.dark_mode_outlined,
+              color: colorScheme.primary,
+            ),
             title: const Text('Темная тема'),
-            value: settings.isDarkMode, 
+            value: settings.isDarkMode,
             onChanged: (v) => settings.toggleTheme(v),
           ),
           ListTile(
-            leading: Icon(Icons.format_size_rounded, color: colorScheme.primary),
+            leading: Icon(
+              Icons.format_size_rounded,
+              color: colorScheme.primary,
+            ),
             title: const Text('Размер шрифта'),
             subtitle: Slider(
               value: settings.fontSizeMultiplier,
-              min: 0.8, max: 1.5, divisions: 7,
+              min: 0.8,
+              max: 1.5,
+              divisions: 7,
               label: '${(settings.fontSizeMultiplier * 100).toInt()}%',
               onChanged: (v) => settings.setFontSizeMultiplier(v),
             ),
@@ -621,9 +812,12 @@ class _DoctorSettingsTab extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.logout_rounded, color: Colors.red),
-            title: const Text('Выйти из аккаунта', style: TextStyle(color: Colors.red)),
+            title: const Text(
+              'Выйти из аккаунта',
+              style: TextStyle(color: Colors.red),
+            ),
             onTap: () => Navigator.pushReplacement(
-              context, 
+              context,
               MaterialPageRoute(builder: (context) => const LoginScreen()),
             ),
           ),
@@ -635,7 +829,10 @@ class _DoctorSettingsTab extends StatelessWidget {
   Widget _buildSettingsHeader(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+      child: Text(
+        title,
+        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+      ),
     );
   }
 }
