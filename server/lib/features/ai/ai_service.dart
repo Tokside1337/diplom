@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:http/http.dart' as http;
 import '../../core/config/app_config.dart';
 import 'ai_prompts.dart';
 import '../patients/patient_repository.dart';
@@ -14,6 +14,43 @@ class AiService {
   final MoodRepository _moodRepo;
 
   AiService(this._patientRepo, this._emkRepo, this._measurementRepo, this._moodRepo);
+
+  Future<String> _callOllama(String systemPrompt, String userPrompt) async {
+    final url = Uri.parse('${AppConfig.ollamaBaseUrl}/api/chat');
+    
+    final body = jsonEncode({
+      'model': AppConfig.ollamaModel,
+      'messages': [
+        {'role': 'system', 'content': systemPrompt},
+        {'role': 'user', 'content': userPrompt},
+      ],
+      'stream': false,
+    });
+
+    print('[AiService] Calling Ollama: ${AppConfig.ollamaModel}');
+    print('[AiService] Prompt length: ${userPrompt.length}');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      ).timeout(const Duration(seconds: 60));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        final content = data['message']['content'] as String;
+        print('[AiService] Success. Response length: ${content.length}');
+        return content;
+      } else {
+        print('[AiService] Error from Ollama: ${response.statusCode} ${response.body}');
+        return 'Ошибка LLM (код ${response.statusCode}).';
+      }
+    } catch (e) {
+      print('[AiService] Exception during Ollama call: $e');
+      return 'Не удалось связаться с локальной LLM.';
+    }
+  }
 
   Future<String> chat(String message, int patientId, bool isDoctor) async {
     String contextData = '';
@@ -38,15 +75,10 @@ class AiService {
       }
     }
 
-    final model = GenerativeModel(
-      model: 'gemini-3.1-flash-lite',
-      apiKey: AppConfig.aiApiKey,
-      systemInstruction: Content.system(isDoctor ? AiPrompts.doctorPrompt : AiPrompts.patientPrompt),
-    );
+    final systemPrompt = isDoctor ? AiPrompts.doctorPrompt : AiPrompts.patientPrompt;
+    final userPrompt = contextData.isNotEmpty ? '$contextData\n\nЗапрос: $message' : message;
 
-    final prompt = contextData.isNotEmpty ? '$contextData\n\nЗапрос: $message' : message;
-    final response = await model.generateContent([Content.text(prompt)]);
-    return response.text ?? 'Не удалось получить ответ.';
+    return await _callOllama(systemPrompt, userPrompt);
   }
 
   Future<Map<String, dynamic>> analyzeHealth(int patientId) async {
@@ -69,14 +101,7 @@ class AiService {
         'ПОСЛЕДНИЕ ЗАМЕРЫ (АД, Пульс, Боль): ${measurements.reversed.take(10).map((m) => "${m.pressureSystolic.toInt()}/${m.pressureDiastolic.toInt()}, P:${m.pulse}, Pain:${m.painLevel}").join("; ")}\n'
         'ПОСЛЕДНЕЕ НАСТРОЕНИЕ: ${moods.reversed.take(5).map((m) => "Оценка:${m.score}, Коммент:${m.comment}").join("; ")}\n';
 
-    final model = GenerativeModel(
-      model: 'gemini-3.1-flash-lite',
-      apiKey: AppConfig.aiApiKey,
-      systemInstruction: Content.system(AiPrompts.analysisInstruction),
-    );
-
-    final response = await model.generateContent([Content.text('Проанализируй состояние пациента и данные его медкарты:\n$medicalContext')]);
-    final text = response.text ?? '';
+    final text = await _callOllama(AiPrompts.analysisInstruction, 'Проанализируй состояние пациента и данные его медкарты:\n$medicalContext');
 
     String cleanJson = text;
     if (text.contains('```json')) {
@@ -88,6 +113,7 @@ class AiService {
     try {
       return jsonDecode(cleanJson);
     } catch (e) {
+      print('[AiService] JSON parse error: $e. Raw text: $text');
       return {
         'summary': text,
         'recommendations': ['Следуйте назначениям врача', 'Соблюдайте режим покоя', 'Продолжайте мониторинг']
