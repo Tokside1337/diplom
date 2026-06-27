@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -10,19 +11,12 @@ class PdfService {
     try {
       debugPrint('Начало генерации PDF...');
       final pw.Document doc = pw.Document();
-      
-      // Загрузка шрифтов с обработкой ошибок
-      pw.Font font;
-      pw.Font boldFont;
-      
-      try {
-        font = await PdfGoogleFonts.robotoRegular();
-        boldFont = await PdfGoogleFonts.robotoBold();
-      } catch (e) {
-        debugPrint('Ошибка загрузки Google Fonts, используем стандартный шрифт: $e');
-        font = pw.Font.helvetica();
-        boldFont = pw.Font.helveticaBold();
-      }
+      final font = pw.Font.ttf(
+        await rootBundle.load('assets/fonts/Arial-Regular.ttf'),
+      );
+      final boldFont = pw.Font.ttf(
+        await rootBundle.load('assets/fonts/Arial-Bold.ttf'),
+      );
 
       doc.addPage(
         pw.MultiPage(

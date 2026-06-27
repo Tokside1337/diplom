@@ -17,7 +17,6 @@ dependencies:
   provider: ^6.0.5
   fl_chart: ^1.2.0
   intl: ^0.20.2
-  google_fonts: ^8.0.2
   http: ^1.6.0
   google_generative_ai: ^0.4.7
   pdf: ^3.12.0
@@ -30,3 +29,14 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  fonts:
+    - family: AppArial
+      fonts:
+        - asset: assets/fonts/Arial-Regular.ttf
+        - asset: assets/fonts/Arial-Bold.ttf
+          weight: 700
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Arial-Regular.ttf
+        - asset: assets/fonts/Arial-Bold.ttf
+          weight: 700

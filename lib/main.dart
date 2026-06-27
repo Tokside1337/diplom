@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:diplom/screens/login_screen.dart';
 import 'package:diplom/providers/settings_provider.dart';
@@ -36,7 +35,7 @@ class RehabApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: Colors.blue,
-        textTheme: GoogleFonts.robotoTextTheme(),
+        fontFamily: 'AppArial',
         cardTheme: CardThemeData(
           elevation: 0,
           shape: RoundedRectangleBorder(
@@ -64,7 +63,7 @@ class RehabApp extends StatelessWidget {
         useMaterial3: true,
         brightness: Brightness.dark,
         colorSchemeSeed: Colors.blue,
-        textTheme: GoogleFonts.robotoTextTheme(ThemeData.dark().textTheme),
+        fontFamily: 'AppArial',
         cardTheme: CardThemeData(
           elevation: 0,
           shape: RoundedRectangleBorder(
